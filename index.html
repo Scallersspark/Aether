@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob: https://api.qrserver.com; font-src 'self' https://cdnjs.cloudflare.com data:; connect-src 'self' https://api.ipify.org;" />
+    <title>Aether</title>
+    <!-- manifest added dynamically in app.js to avoid file:// CORS errors -->
+    <meta name="theme-color" content="#0A84FF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Aether">
+    <link rel="apple-touch-icon" href="icon-192.png?v=3">
+    <link rel="icon" type="image/svg+xml" href="icon.svg?v=3">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="stylesheet" href="css/all.min.css">
+    <link rel="stylesheet" href="styles.css?v=9.5.0">
+    <!-- Lucide Icons (local) -->
+    <script defer src="lucide.min.js"></script>
+
+    <!-- html2canvas: Renders HTML/CSS to canvas (local) -->
+    <script defer src="html2canvas.min.js"></script>
+    <!-- jsPDF: Creates PDF with native watermark support (local) -->
+    <script defer src="jspdf.umd.min.js"></script>
+    <script defer src="canvasjs.min.js"></script>
+</head>
+<body class="pre-auth">
+
+    <!-- ====== SPLASH COVER ====== -->
+    <div id="splashScreen" style="position:fixed;inset:0;z-index:99999;background:#0d1117;display:flex;align-items:center;justify-content:center;transition:opacity .3s;">
+        <svg viewBox="0 0 24 24" width="40" height="40" stroke="#3b82f6" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" style="animation:pulse 1.5s infinite"><path d="M12 2L3 7v5c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/></svg>
+    </div>
+    <style>@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}</style>
+    <script>
+        setTimeout(function(){var s=document.getElementById('splashScreen');if(s){s.style.opacity='0';setTimeout(function(){s.remove()},350);}},8000);
+        (function(){
+            var V = '9.5.0';
+            if (window.caches && caches.keys) {
+                caches.keys().then(function(keys){
+                    keys.forEach(function(k){ if (k.indexOf('aether-v') === 0 && k !== 'aether-v' + V) caches.delete(k); });
+                });
+            }
+            if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+                navigator.serviceWorker.getRegistrations().then(function(rs){
+                    rs.forEach(function(r){ if (r.update) r.update(); });
+                });
+            }
+        })();
+    </script>
+
+    <!-- ====== APP FRAME ====== -->
+    <div id="app-frame">
+
+        <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none;" onchange="handleCamInput(event)">
+        <input type="file" id="importInput" accept="image/*" style="display:none;" onchange="handleImportInput(event)">
+
+        <!-- ===== LOCK SCREEN ===== -->
+        <div id="appLockScreen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:var(--bg-body); justify-content:center; align-items:center; flex-direction:column; padding:3rem;">
+            <div style="width:100%; max-width:400px; min-height:85vh; background:var(--surface); border:1px solid var(--border-light); border-radius:var(--radius-xl); box-shadow:var(--shadow-lg); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:3rem 2rem; gap:0.5rem;">
+
+                <!-- PASSWORD VIEW -->
+                <div id="lockViewPass">
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem; width:100%;">
+                        <svg viewBox="0 0 24 24" stroke="var(--accent)" stroke-width="1.5" fill="none" style="width:52px; height:52px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <div style="font-size:1.1rem; font-weight:var(--font-weight-black); color:var(--text-main); letter-spacing:0.12em;">AETHER</div>
+                        <div id="lockScreenUsername" style="font-size:0.85rem; font-weight:var(--font-weight-bold); color:var(--accent); letter-spacing:0.03em;">user</div>
+                        <div style="font-size:0.6rem; color:var(--text-muted); margin-top:0.3rem;">Enter password to continue</div>
+                        <div style="display:flex; align-items:center; width:100%; margin-top:0.8rem; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" id="lockPassWrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <input type="password" id="lockScreenPass" placeholder="Password" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;" autocomplete="current-password" onkeydown="if(event.key==='Enter')unlockApp()">
+                            <button type="button" id="lockToggleEye" onclick="toggleLockPassword()" style="background:none; border:none; padding:0; cursor:pointer; display:flex; align-items:center; flex-shrink:0;">
+                                <svg id="lockEyeOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted);"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                <svg id="lockEyeOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--accent); display:none;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+                        <div id="lockScreenError" style="font-size:0.6rem; color:var(--red); min-height:0.8em; margin-top:0.15rem; opacity:0; transition:opacity 0.2s;">Incorrect password</div>
+                        <div style="width:100%; display:flex; justify-content:flex-end;">
+                            <button type="button" onclick="showForgotPinView()" style="background:none; border:none; font-size:0.6rem; color:var(--accent); cursor:pointer; font-family:var(--font-family); font-weight:var(--font-weight-bold); padding:0;">Forgot Password?</button>
+                        </div>
+                        <button onclick="unlockApp()" style="width:100%; padding:0.7rem; background:var(--accent); color:#fff; border:none; border-radius:var(--radius-md); font-weight:var(--font-weight-black); cursor:pointer; font-family:var(--font-family); font-size:0.85rem; letter-spacing:0.06em; margin-top:0.25rem; box-shadow:0 4px 16px rgba(0,122,255,0.25); transition:transform 0.2s;">UNLOCK</button>
+                    </div>
+                </div>
+
+                <!-- FORGOT PASSWORD VIEW -->
+                <div id="lockViewForgot" style="display:none; width:100%; height:100%; flex-direction:column;">
+                    <div style="width:100%; display:flex; align-items:center; justify-content:center; position:relative; padding-bottom:1rem;">
+                        <button type="button" onclick="showPasswordView()" style="position:absolute; left:0; background:none; border:none; cursor:pointer; display:flex; align-items:center; padding:0;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="width:20px; height:20px;"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <span style="font-size:0.7rem; font-weight:var(--font-weight-bold); color:var(--text-muted); letter-spacing:0.06em;">BACK TO LOGIN</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem; width:100%; flex:1; justify-content:center;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5" style="width:48px; height:48px;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/><line x1="12" y1="13" x2="12" y2="14.5"/></svg>
+                        <div style="font-size:1rem; font-weight:var(--font-weight-black); color:var(--text-main); letter-spacing:0.08em;">Forgot Password?</div>
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-align:center; line-height:1.5; margin-top:0.2rem;">Enter the Reset PIN that was shown in Settings when you created your password.</div>
+                        <div style="display:flex; align-items:center; width:100%; margin-top:0.8rem; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" id="lockPinWrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="8" y1="15" x2="16" y2="15"/></svg>
+                            <input type="text" id="lockResetPinInput" placeholder="XXXX-XXXX" maxlength="9" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:monospace; font-weight:var(--font-weight-bold); letter-spacing:0.15em; outline:none;" onkeydown="if(event.key==='Enter')resetPasswordWithPin()" oninput="this.value=this.value.toUpperCase()">
+                        </div>
+                        <div id="lockPinError" style="font-size:0.6rem; color:var(--red); min-height:0.8em; margin-top:0.15rem; opacity:0; transition:opacity 0.2s;">Invalid reset PIN</div>
+                        <button onclick="resetPasswordWithPin()" style="width:100%; padding:0.7rem; background:var(--amber); color:#fff; border:none; border-radius:var(--radius-md); font-weight:var(--font-weight-black); cursor:pointer; font-family:var(--font-family); font-size:0.85rem; letter-spacing:0.06em; margin-top:0.25rem; box-shadow:0 4px 16px rgba(255,159,10,0.25); transition:transform 0.2s;">RESET PASSWORD</button>
+                    </div>
+                </div>
+
+                <!-- NEW PASSWORD VIEW -->
+                <div id="lockViewNewPass" style="display:none; width:100%; height:100%; flex-direction:column;">
+                    <div style="width:100%; display:flex; align-items:center; justify-content:center; position:relative; padding-bottom:1rem;">
+                        <button type="button" onclick="showPasswordView()" style="position:absolute; left:0; background:none; border:none; cursor:pointer; display:flex; align-items:center; padding:0;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="width:20px; height:20px;"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <span style="font-size:0.7rem; font-weight:var(--font-weight-bold); color:var(--text-muted); letter-spacing:0.06em;">BACK TO LOGIN</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem; width:100%; flex:1; justify-content:center;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" style="width:48px; height:48px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                        <div style="font-size:1rem; font-weight:var(--font-weight-black); color:var(--text-main); letter-spacing:0.08em;">Create New Password</div>
+                        <div style="font-size:0.6rem; color:var(--text-muted); text-align:center; line-height:1.5; margin-top:0.2rem;">Set a new password to secure your app.</div>
+                        <div style="display:flex; align-items:center; width:100%; margin-top:0.8rem; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" id="lockNewPassWrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <input type="password" id="lockNewPassInput" placeholder="New password" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                        </div>
+                        <div style="display:flex; align-items:center; width:100%; margin-top:0.5rem; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" id="lockConfirmPassWrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <input type="password" id="lockConfirmPassInput" placeholder="Confirm new password" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;" onkeydown="if(event.key==='Enter')setNewPasswordFromReset()">
+                        </div>
+                        <div id="lockNewPassError" style="font-size:0.6rem; color:var(--red); min-height:0.8em; margin-top:0.15rem; opacity:0; transition:opacity 0.2s;">Passwords do not match</div>
+                        <button onclick="setNewPasswordFromReset()" style="width:100%; padding:0.7rem; background:var(--green); color:#fff; border:none; border-radius:var(--radius-md); font-weight:var(--font-weight-black); cursor:pointer; font-family:var(--font-family); font-size:0.85rem; letter-spacing:0.06em; margin-top:0.25rem; box-shadow:0 4px 16px rgba(52,199,89,0.25); transition:transform 0.2s;">SAVE PASSWORD</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ===== JS REQUIRED NOTICE ===== -->
+        <noscript>
+            <div class="login-noscript" style="display:flex !important; position:absolute; top:0; left:0; width:100%; height:100%; z-index:9999; background:var(--bg-body); justify-content:center; align-items:center;">
+                <p>Please enable JavaScript to use Aether.</p>
+            </div>
+        </noscript>
+
+        <!-- ===== ALERTS & MODALS ===== -->
+
+        <div id="customAlertModal" class="modal-overlay">
+            <div class="modal-content b-main" style="max-width:280px; text-align:center; padding:0.8rem;">
+                <h3 id="alertTitle" style="border-bottom:1.5px solid; padding-bottom:0.4rem; color:var(--accent); border-color:var(--accent); font-family:var(--font-family);" data-i18n="alert.title">Notice</h3>
+                <p id="alertMsg" style="font-size:0.85rem; font-weight:600; margin:0.7rem 0; color:var(--text-main); font-family:var(--font-family);"></p>
+                <div onclick="closeAlert()" style="border-radius:var(--radius-full); padding:0.4rem; background:var(--accent-gradient); color:#fff; font-weight:var(--font-weight-black); cursor:pointer; border:none; font-family:var(--font-family);" aria-label="Close alert" data-i18n="common.ok">OK</div>
+            </div>
+        </div>
+
+        <div id="confirmModal" class="modal-overlay">
+            <div class="modal-content b-main" style="max-width:280px; text-align:center; padding:0.8rem;">
+                <h3 style="border-bottom:1.5px solid var(--border-red); padding-bottom:0.4rem; color:var(--border-red); font-family:var(--font-family);" data-i18n="confirm.title">Confirm</h3>
+                <p id="confirmMsg" style="font-size:0.85rem; font-weight:600; margin:0.7rem 0; color:var(--text-main); font-family:var(--font-family);"></p>
+                <div class="flex-row" style="justify-content:center; gap:0.4rem;">
+                    <button id="confirmYes" class="b-red" style="border-radius:var(--radius-full); flex:1; border-color:var(--border-red); color:var(--border-red); background:transparent; font-family:var(--font-family);" aria-label="Confirm yes" data-i18n="common.yes">Yes</button>
+                    <button onclick="closeModal('confirmModal')" class="b-gray" style="border-radius:var(--radius-full); flex:1; font-family:var(--font-family);" aria-label="Confirm no" data-i18n="common.no">No</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="cameraModal" class="modal-overlay" style="background:#0a0a0c; padding:0; display:flex; flex-direction:column;">
+            <!-- Top Tab Row -->
+            <div class="cam-top-bar">
+                <button class="cam-tab" onclick="manipulateCam('rotate')" aria-label="Rotate">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    <span>Rotate</span>
+                </button>
+                <button class="cam-tab" onclick="camShowCropPanel()" aria-label="Crop">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M6.13 1L6 16a2 2 0 0 0 2 2h15"/><path d="M1 6.13L16 6a2 2 0 0 1 2 2v15"/></svg>
+                    <span>Crop</span>
+                </button>
+                <button class="cam-tab" onclick="camShowFilterPanel()" aria-label="Filter">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                    <span>Filter</span>
+                </button>
+                <button class="cam-tab" onclick="camShowAdjustPanel()" aria-label="Adjust">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>Adjust</span>
+                </button>
+                <div style="width:1px; height:20px; background:rgba(255,255,255,0.15); margin:0 2px;"></div>
+                <button class="cam-tab cam-tab-save" onclick="saveCam()" aria-label="Save">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    <span>Save</span>
+                </button>
+                <button class="cam-tab" onclick="closeModal('cameraModal')" aria-label="Close">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <!-- Crop Panel (hidden by default) -->
+            <div id="camCropPanel" class="cam-sub-panel" style="display:none;">
+                <select id="camCropRatio" aria-label="Crop ratio" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:0.65rem; background:rgba(24,24,27,0.8); color:#fff; border:1px solid rgba(255,255,255,0.15); outline:none; font-family:var(--font-family);">
+                    <option value="free">Free</option>
+                    <option value="1">1:1</option>
+                    <option value="1.333">4:3</option>
+                    <option value="1.777">16:9</option>
+                    <option value="0.667">3:4</option>
+                    <option value="0.5625">9:16</option>
+                    <option value="1.5">3:2</option>
+                    <option value="0.667">2:3</option>
+                    <option value="1.25">5:4</option>
+                    <option value="0.8">4:5</option>
+                    <option value="2.35">21:9</option>
+                </select>
+                <button class="cam-sub-btn" onclick="manipulateCam('crop')">Apply Crop</button>
+            </div>
+            <!-- Filter Panel (hidden by default) -->
+            <div id="camFilterPanel" class="cam-sub-panel" style="display:none; flex-direction:column; gap:6px; padding:6px 8px;">
+                <div style="display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap;">
+                    <button class="cam-filter-opt" onclick="camApplyFilter('none',this)">None</button>
+                    <button class="cam-filter-opt" onclick="camApplyFilter('grayscale',this)">Gray</button>
+                    <button class="cam-filter-opt" onclick="camApplyFilter('sepia',this)">Sepia</button>
+                    <button class="cam-filter-opt" onclick="camApplyFilter('invert',this)">Invert</button>
+                    <button class="cam-filter-opt" onclick="camApplyFilter('blur',this)">Blur</button>
+                </div>
+            </div>
+            <!-- Adjust Panel (hidden by default) -->
+            <div id="camAdjustPanel" class="cam-sub-panel" style="display:none; flex-direction:column; gap:5px; padding:6px 8px;">
+                <div style="display:flex; align-items:center; gap:6px; max-width:280px;">
+                    <label for="camBrightness" style="font-size:0.5rem; color:rgba(255,255,255,0.5); font-family:var(--font-family); white-space:nowrap; min-width:36px;">Bri</label>
+                    <input type="range" id="camBrightness" min="0" max="200" value="100" style="flex:1;" oninput="camApplyAdjust()">
+                    <span id="camBrightnessVal" style="font-size:0.5rem; color:rgba(255,255,255,0.6); font-family:var(--font-family); min-width:22px; text-align:right;">100</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; max-width:280px;">
+                    <label for="camContrast" style="font-size:0.5rem; color:rgba(255,255,255,0.5); font-family:var(--font-family); white-space:nowrap; min-width:36px;">Con</label>
+                    <input type="range" id="camContrast" min="0" max="200" value="100" style="flex:1;" oninput="camApplyAdjust()">
+                    <span id="camContrastVal" style="font-size:0.5rem; color:rgba(255,255,255,0.6); font-family:var(--font-family); min-width:22px; text-align:right;">100</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; max-width:280px;">
+                    <label for="camSaturation" style="font-size:0.5rem; color:rgba(255,255,255,0.5); font-family:var(--font-family); white-space:nowrap; min-width:36px;">Sat</label>
+                    <input type="range" id="camSaturation" min="0" max="200" value="100" style="flex:1;" oninput="camApplyAdjust()">
+                    <span id="camSaturationVal" style="font-size:0.5rem; color:rgba(255,255,255,0.6); font-family:var(--font-family); min-width:22px; text-align:right;">100</span>
+                </div>
+            </div>
+            <!-- Center Image -->
+            <div style="position:relative; flex:1; display:flex; justify-content:center; align-items:center; width:100%; overflow:hidden; padding:0.5rem 1rem;">
+                <div style="position:relative; width:100%; max-height:100%; display:flex; justify-content:center; align-items:center;">
+                    <canvas id="camCanvas" style="max-width:100%; max-height:100%; border-radius:var(--radius-md); object-fit:contain;"></canvas>
+                    <div id="camMetadata" style="position:absolute; bottom:8px; left:8px; color:rgba(255,255,255,0.75); font-size:0.55rem; background:rgba(0,0,0,0.55); padding:4px 10px; border-radius:var(--radius-sm); font-family:var(--font-family); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);"></div>
+                </div>
+            </div>
+            <!-- Bottom Toolbar -->
+            <div class="cam-bottom-bar">
+                <button class="cam-tool" id="camUndoBtn" onclick="camUndo()" aria-label="Undo" style="opacity:0.3; pointer-events:none;">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    <span>Undo</span>
+                </button>
+                <button class="cam-tool" id="camRedoBtn" onclick="camRedo()" aria-label="Redo" style="opacity:0.3; pointer-events:none;">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    <span>Redo</span>
+                </button>
+                <button class="cam-tool" onclick="camZoom(-0.2)" aria-label="Zoom out">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                    <span>Zoom -</span>
+                </button>
+                <button class="cam-tool" onclick="camZoom(0.2)" aria-label="Zoom in">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                    <span>Zoom +</span>
+                </button>
+                <button class="cam-tool" onclick="camShare()" aria-label="Share">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    <span>Share</span>
+                </button>
+                <button class="cam-tool" onclick="camDownload()" aria-label="Download">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Download</span>
+                </button>
+                <button class="cam-tool cam-tool-del" onclick="camDelete()" aria-label="Delete">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Delete</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="picViewModal" class="modal-overlay" style="background:#000; padding:0; display:flex; flex-direction:column;">
+            <div class="pic-view-bar">
+                <div class="pic-view-row">
+                    <span class="pic-view-label">Size</span>
+                    <button onclick="picViewSetMode('full')" class="pic-view-opt active" data-mode="full">Full</button>
+                    <button onclick="picViewSetMode('half')" class="pic-view-opt" data-mode="half">Half</button>
+                    <button onclick="picViewSetMode('third')" class="pic-view-opt" data-mode="third">Third</button>
+                    <div style="flex:1;"></div>
+                    <button onclick="closeModal('picViewModal')" class="pic-view-close" aria-label="Close">&#x2715;</button>
+                </div>
+                <div class="pic-view-row">
+                    <span class="pic-view-label">Orient</span>
+                    <button onclick="picViewSetOrient('auto')" class="pic-view-orient active" data-orient="auto">Auto</button>
+                    <button onclick="picViewSetOrient('portrait')" class="pic-view-orient" data-orient="portrait">Portrait</button>
+                    <button onclick="picViewSetOrient('landscape')" class="pic-view-orient" data-orient="landscape">Landscape</button>
+                </div>
+            </div>
+            <div class="pic-view-body">
+                <canvas id="picViewCanvas"></canvas>
+            </div>
+        </div>
+
+        <div id="archiveViewModal" class="modal-overlay">
+            <div class="modal-content b-main" style="max-width:95%; width:600px; padding:0; overflow:hidden; display:flex; flex-direction:column; height:85vh;">
+                <div class="flex-row" style="justify-content:space-between; align-items:center; padding:0.4rem 0.6rem; border-bottom:1.5px solid var(--border-light); background:var(--surface); flex-wrap:wrap; gap:0.2rem;">
+                    <div class="flex-row" style="gap:0.3rem; align-items:center;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+                        <span id="archiveViewTitle" style="font-size:0.75rem; font-weight:var(--font-weight-black); color:var(--accent); font-family:var(--font-family);">Archive</span>
+                    </div>
+                    <div class="flex-row" style="gap:0.2rem; align-items:center;">
+                        <button class="b-blue" style="padding:0.15rem 0.5rem; border-radius:var(--radius-full); font-size:0.55rem; font-family:var(--font-family);" onclick="downloadArchive(currentArchiveKey)" aria-label="Download archive PDF" data-i18n="archive.download">Download PDF</button>
+                        <button class="icon-btn" style="border:none; background:transparent; color:var(--text-muted); padding:0.1rem;" onclick="closeModal('archiveViewModal')" aria-label="Close archive view">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="archiveViewContent" style="flex:1; overflow:auto; padding:0.5rem; background:var(--surface);"></div>
+            </div>
+        </div>
+
+        <div id="renameModal" class="modal-overlay" style="z-index:3300;">
+            <div class="modal-content b-main rename-modal-content">
+                <div class="flex-row" style="margin-bottom:0.3rem;">
+                    <h3 id="renameModalTitle" style="margin:0; color:var(--accent); font-family:var(--font-family);" data-i18n="rename.title">Rename</h3>
+                    <button class="icon-btn b-red" style="border:none; background:transparent; color:var(--text-muted);" onclick="closeModal('renameModal')" aria-label="Close rename modal">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <label for="renameInput" class="visually-hidden">New title</label>
+                <input type="text" id="renameInput" placeholder="Enter new title" aria-label="New title" style="border-radius:var(--radius-full);" data-i18n-ph="rename.ph">
+                <button class="b-green" style="border-radius:var(--radius-full); background:var(--accent-gradient); color:#fff; border:none; font-family:var(--font-family);" onclick="confirmRename()" aria-label="Confirm rename" data-i18n="rename.btn">Rename</button>
+            </div>
+        </div>
+
+        <div id="editLedgerModal" class="modal-overlay">
+            <div class="modal-content b-main" style="max-width:380px; padding:1rem;">
+                <div class="flex-row" style="margin-bottom:0.3rem;">
+                    <h3 id="editLedgerModalTitle" style="margin:0; color:var(--accent); font-family:var(--font-family);" data-i18n="ledgerEdit.title">Edit Expense</h3>
+                    <button class="icon-btn b-red" style="border:none; background:transparent; color:var(--text-muted);" onclick="closeModal('editLedgerModal')" aria-label="Close edit modal">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <input type="text" id="editLedgerItem" placeholder="Item Name" aria-label="Item name" style="border-radius:var(--radius-full); margin-bottom:0.3rem;" data-i18n-ph="ledgerEdit.item">
+                <input type="text" inputmode="decimal" id="editLedgerAmount" placeholder="Amount" aria-label="Amount" style="border-radius:var(--radius-full); margin-bottom:0.3rem;" oninput="formatCommaInput(this)" data-i18n-ph="ledgerEdit.amount">
+                <input type="text" inputmode="decimal" id="editLedgerQuantity" placeholder="Quantity" aria-label="Quantity" style="border-radius:var(--radius-full); margin-bottom:0.3rem;" oninput="formatCommaInput(this)" data-i18n-ph="ledgerEdit.qty">
+                <select id="editLedgerCategory" aria-label="Category" style="border-radius:var(--radius-full); margin-bottom:0.3rem;"></select>
+                <button id="editLedgerSaveBtn" class="b-green" style="border-radius:var(--radius-full); margin-top:0.3rem; background:var(--accent-gradient); color:#fff; border:none; font-family:var(--font-family);" onclick="saveEditedLedger()" data-i18n="ledgerEdit.save">Save Changes</button>
+            </div>
+        </div>
+
+        <div id="drawerOverlay" onclick="closeDrawer()"></div>
+
+        <div id="gridDrawerPanel" class="drawer-panel">
+            <div class="drawer-header">
+                <div class="drawer-header-top">
+                    <h2 data-i18n="drawer.title">DRAWER</h2>
+                    <button class="close-drawer" onclick="closeDrawer()" aria-label="Close drawer"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="drawer-counter"><span data-i18n="drawer.gridTotal">Total Grids:</span> <span id="gridDrawerTotal">0</span></div>
+            </div>
+            <div class="drawer-scroll" id="gridDrawerList"></div>
+        </div>
+
+        <div id="ledgerDrawerPanel" class="drawer-panel">
+            <div class="drawer-header">
+                <div class="drawer-header-top">
+                    <h2 data-i18n="drawer.title">DRAWER</h2>
+                    <button class="close-drawer" onclick="closeDrawer()" aria-label="Close drawer"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="drawer-counter"><span data-i18n="drawer.ledgerTotal">Total Ledgers:</span> <span id="ledgerDrawerTotal">0</span></div>
+            </div>
+            <div class="drawer-scroll" id="ledgerDrawerList"></div>
+        </div>
+
+
+        <!-- ===== SLIDE MENU ===== -->
+        <div id="slideOverlay" onclick="closeSlideMenu()"></div>
+        <div id="slideMenu">
+            <div class="slide-header">
+                <h2>AETHER</h2>
+                <button class="close-slide" onclick="closeSlideMenu()" aria-label="Close menu"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+                        <div class="slide-scroll">
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('home')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span><span data-i18n="menu.home">Home</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('grids')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span><span data-i18n="menu.grids">Grids</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('finance')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span><span data-i18n="menu.finance">Finance</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('notes')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span data-i18n="menu.notes">Notes</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('profile')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="8" r="5"/><path d="M20 21v-2a7 7 0 0 0-14 0v2"/></svg></span><span data-i18n="menu.profile">Profile</span></div>
+                <div class="slide-divider"></div>
+                <div class="ce-dropdown-trigger" onclick="toggleCeDropdown()"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span><span data-i18n="menu.console">Console Engine</span><span class="ce-arrow" id="ceArrow"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg></span></div>
+                <div class="ce-dropdown-items" id="ceDropdownItems"><div class="slide-item" onclick="closeSlideMenu(); navRoute('console'); ceNavigate('grid')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span><span data-i18n="menu.grids">Grid</span></div><div class="slide-item" onclick="closeSlideMenu(); navRoute('console'); ceNavigate('finance')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span><span data-i18n="menu.finance">Finance</span></div><div class="slide-item" onclick="closeSlideMenu(); navRoute('console'); ceNavigate('budget')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span><span data-i18n="menu.budget">Budget</span></div><div class="slide-item" onclick="closeSlideMenu(); navRoute('console'); ceNavigate('category')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span data-i18n="menu.category">Category</span></div><div class="slide-item" onclick="closeSlideMenu(); navRoute('console'); ceNavigate('status')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span><span data-i18n="menu.status">Status</span></div></div>
+                <div class="st-dropdown-trigger" onclick="toggleStorageDropdown()"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span><span data-i18n="menu.storage">Storage</span><span class="st-arrow" id="stArrow"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg></span></div>
+                <div class="st-dropdown-items" id="stDropdownItems"><div class="slide-item" onclick="closeSlideMenu(); navRoute('storage'); storageNavigate('eom')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></span><span data-i18n="menu.archives">Archives</span></div><div class="slide-item" onclick="closeSlideMenu(); navRoute('storage'); storageNavigate('notes')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span data-i18n="menu.notes">Notes</span></div><div class="slide-item" onclick="closeSlideMenu(); navRoute('storage'); storageNavigate('pictures')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><span data-i18n="menu.pictures">Pictures</span></div></div>
+                <div class="cal-dropdown-trigger" onclick="toggleCalcDropdown()"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg></span><span data-i18n="menu.calculator">Calculator</span><span class="cal-arrow" id="calArrow"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"/></svg></span></div>
+                <div class="cal-dropdown-items" id="calDropdownItems"><div class="slide-item" onclick="closeSlideMenu(); navRoute('calculator')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg></span><span data-i18n="menu.calcSimple">Simple</span></div><div class="slide-item" onclick="closeSlideMenu(); navRoute('age')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span data-i18n="menu.age">Age</span></div><div class="slide-item" onclick="closeSlideMenu(); navRoute('convertor')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span><span>Convertor</span></div></div>
+                <div class="slide-divider"></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('print')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span><span data-i18n="menu.print">Print</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('analytics')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 12v-2a5 5 0 0 0-5-5H8a5 5 0 0 0-5 5v2"/><circle cx="12" cy="16" r="5"/><path d="M12 11v5"/><path d="M9 16l3-3 3 3"/></svg></span><span data-i18n="menu.analytics">Analytics</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('settings')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span data-i18n="menu.settings">Settings</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('theme')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="5"/><path d="M12 1v4"/><path d="M12 19v4"/><path d="M4.22 4.22l2.83 2.83"/><path d="M16.95 16.95l2.83 2.83"/><path d="M1 12h4"/><path d="M19 12h4"/><path d="M4.22 19.78l2.83-2.83"/><path d="M16.95 7.05l2.83-2.83"/></svg></span><span data-i18n="menu.theme">Theme</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('notifications')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span><span data-i18n="menu.notifications">Notifications</span></div>
+                <div class="slide-divider"></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('recycle')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/><path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/><path d="m14 16-3 3 3 3"/><path d="M8.293 13.596 7.196 9.5 3.1 10.598"/><path d="m9.344 5.811 1.093-1.892A1.83 1.83 0 0 1 11.985 3a1.784 1.784 0 0 1 1.546.888l3.943 6.843"/><path d="m13.378 9.633 4.096 1.098 1.097-4.096"/></svg></span><span data-i18n="menu.recycle">Recycle Bin</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('reset')" style="color:var(--text-main);"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12a9 9 0 1 0 9-9m0 0v6m0-6h-6"/></svg></span><span data-i18n="menu.reset">Factory Reset</span></div>
+                <div class="slide-item" onclick="closeSlideMenu(); navRoute('about')"><span class="slide-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span><span data-i18n="menu.about">About</span></div>
+                <div class="slide-divider"></div>
+                <div class="slide-footer"><div class="credit-name">Tabeer Ahmad</div><div class="credit-tag">Advanced Tracking Technologies</div><div class="app-version-tag" style="margin-top:2px;font-size:0.4rem;color:var(--text-muted);">v9.0.6</div></div>
+            </div>
+        </div>
+
+        <!-- ===== TOP NAV ===== -->
+        <header class="top-nav">
+            <button class="icon-btn" onclick="toggleSlideMenu()" aria-label="Open menu" style="border-radius:50%; border-color:var(--border-med); flex-shrink:0;">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+
+            <div class="top-nav-search">
+                <input type="text" id="topSearchInput" placeholder="Search..." aria-label="Search" oninput="handleSearchInput(this.value)" autocomplete="off" data-i18n-ph="search.ph">
+                <button class="search-clear" id="searchClearBtn" onclick="clearSearch()" aria-label="Clear search"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                <div id="globalSearchResults"></div>
+            </div>
+
+            <div class="header-actions">
+                <button class="icon-btn b-gray" onclick="toggleGhost()" id="btnGhost" aria-label="Toggle ghost mode">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" id="icon-eye"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+
+                <div style="position:relative;">
+                    <button class="icon-btn" onclick="toggleDrop('notifyDrop')" aria-label="Open notifications" style="border-color:var(--border-med);">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="badge" id="notifBadge" style="display:none;">0</span>
+                    </button>
+                    <div class="dropdown" id="notifyDrop" style="padding:0;">
+                        <div style="text-align:center; border-bottom:1px solid var(--border-light); padding:0.5rem 0.6rem 0.35rem;">
+                            <h3 style="font-size:0.75rem; color:var(--text-main); margin:0; font-weight:var(--font-weight-black); font-family:var(--font-family); letter-spacing:0.03em; text-align:center;" data-i18n="notify.title">PENDING</h3>
+                        </div>
+                        <div id="notifList" class="flex-col" style="font-size:0.65rem; font-weight:var(--font-weight-bold; font-family:var(--font-family); padding:0.3rem 0; text-align:center;">No new tasks.</div>
+                    </div>
+                </div>
+
+                <button class="icon-btn profile-btn" onclick="toggleProfileDrop()" aria-label="Profile" id="profileAvatarBtn">
+                    <span id="profileInitial">U</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ===== PROFILE DROPDOWN ===== -->
+        <div id="profileDrop">
+            <div class="profile-user" id="profileUserName">User</div>
+            <div class="profile-item" onclick="closeProfileDrop(); navRoute('profile')">
+                <span class="pi-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="8" r="5"/><path d="M20 21v-2a7 7 0 0 0-14 0v2"/></svg></span> <span data-i18n="prof.myProfile">My Profile</span>
+            </div>
+            <div class="profile-item" onclick="closeProfileDrop(); navRoute('settings')">
+                <span class="pi-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> <span data-i18n="menu.settings">Settings</span>
+            </div>
+        </div>
+
+        <!-- ===== MAIN ===== -->
+        <main id="mainSpace">
+
+            <!-- HOME -->
+            <div id="route-home" class="view-section">
+                <div class="themed-box b-main" style="text-align:center; padding:0.5rem 0.4rem; display:flex; justify-content:center; align-items:center; flex-direction:column; gap:0.1rem;">
+                    <div style="font-size:0.85rem; font-weight:var(--font-weight-black); letter-spacing:2px; color:var(--accent);" data-i18n="home.welcome">WELCOME</div>
+                    <div id="homeGreeting" style="font-size:1rem; font-weight:var(--font-weight-black); color:var(--text-main); font-family:var(--font-family); text-align:center;"><span style="color:var(--purple);">USERNAME</span><br>GOOD MORNING</div>
+                    <div id="rtClock" style="font-size:2rem; font-weight:var(--font-weight-black); letter-spacing:2px; color:var(--accent); font-family:var(--font-family);">--:--:--</div>
+                    <div class="sub-lbl" style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:0.3rem;">
+                        <span id="rtDate">---</span>
+                    </div>
+                </div>
+
+                <div class="themed-box b-main">
+                    <h2 data-i18n="home.finStatus">Financial Status</h2>
+                    <div id="globalMetricsVertical"></div>
+                </div>
+
+                <div class="themed-box b-main">
+                    <h2 style="color:var(--color-black);" data-i18n="home.instantAnalysis">Instant Analysis</h2>
+                    <div class="themed-box-sm b-gray" id="instantAnalysisContainer" style="border:1px solid var(--border-light) !important; border-radius:var(--radius-md) !important; background:var(--app-bg); padding:0.4rem 0.3rem !important; min-height:60px; overflow:visible;">
+                        <div class="instant-analysis-row">
+                            <div class="ia-item">
+                                <span class="ia-label" id="dashGrossLbl" style="color:var(--blue);" data-i18n="home.budget">Budget</span>
+                                <span class="ia-value blur-target" id="dashGross" style="font-weight:var(--font-weight-black); color:var(--blue);">0</span>
+                            </div>
+                            <div class="ia-item">
+                                <span class="ia-label" id="dashOutputLbl" style="color:var(--red);" data-i18n="home.expense">Expense</span>
+                                <span class="ia-value blur-target" id="dashOutput" style="font-weight:var(--font-weight-black); color:var(--red);">0</span>
+                            </div>
+                            <div class="ia-item">
+                                <span class="ia-label" id="dashNetLbl" style="color:var(--green);" data-i18n="home.remaining">Remaining</span>
+                                <span class="ia-value blur-target" id="dashNet" style="font-weight:var(--font-weight-black); color:var(--green);">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="themed-box b-main">
+                    <h2 data-i18n="home.breakdown">BREAKDOWN</h2>
+                    <div style="text-align:center; font-size:1.2rem; font-weight:var(--font-weight-black); letter-spacing:2px; color:var(--color-black); padding-bottom:0.25rem;" data-i18n="home.finance">FINANCE</div>
+                    <div class="themed-box-sm" id="expChartContainer" style="background:var(--app-bg);">
+                        <div id="expDoughnutCanvas"></div>
+                        <div class="exp-cat-totals" id="expCatTotals"></div>
+                        <div class="exp-chart-footer" id="expChartFooter"></div>
+                    </div>
+                    <h2 style="margin-top:0.5rem;" data-i18n="home.grid">GRID</h2>
+                    <div class="themed-box-sm" id="gridAnalyticsContainer" style="background:var(--app-bg);">
+                        <span class="sub-lbl" style="text-align:center; font-size:0.55rem;" data-i18n="home.noGridAnalytics">No grid analytics.</span>
+                    </div>
+                </div>
+
+                <div class="themed-box b-gray no-border-box">
+                    <h2 data-i18n="home.progress">Progress Tracking</h2>
+                    <div class="themed-box-sm flex-col" id="progressContainer" style="border:none; background:var(--app-bg);"></div>
+                </div>
+            </div>
+
+            <!-- GRIDS -->
+            <div id="route-grids" class="view-section">
+                <div class="tab-row-with-drawer">
+                    <div class="tab-nav-container" id="gridNav"></div>
+                    <button class="tab-btn drawer-trigger-btn" onclick="openGridDrawer()" aria-label="Open Grid Drawer" data-i18n="drawer.title">DRAWER</button>
+                </div>
+                <div id="gridContainers"></div>
+            </div>
+
+            <!-- FINANCE -->
+            <div id="route-finance" class="view-section">
+                <div class="tab-row-with-drawer">
+                    <div class="tab-nav-container" id="financeNav"></div>
+                    <button class="tab-btn drawer-trigger-btn" onclick="openLedgerDrawer()" aria-label="Open Ledger Drawer">DRAWER</button>
+                </div>
+                <div id="financeContainers"></div>
+            </div>
+
+            <!-- NOTES - Modern Editor -->
+            <div id="route-notes" class="view-section">
+                <div class="editor-toolbar-tab" style="margin-bottom:0.4rem;">
+                    <button class="toolbar-tab-btn active" onclick="execNoteCmd('bold'); setActiveTab(this)" aria-label="Bold"><b>B</b></button>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('italic'); setActiveTab(this)" aria-label="Italic"><i>I</i></button>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('underline'); setActiveTab(this)" aria-label="Underline"><u>U</u></button>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('strikeThrough'); setActiveTab(this)" aria-label="Strikethrough"><s>S</s></button>
+                    <span class="toolbar-sep"></span>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('insertUnorderedList'); setActiveTab(this)" aria-label="Bullet list">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </button>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('insertOrderedList'); setActiveTab(this)" aria-label="Numbered list">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
+                    </button>
+                    <span class="toolbar-sep"></span>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('justifyLeft'); setActiveTab(this)" aria-label="Align left">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+                    </button>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('justifyCenter'); setActiveTab(this)" aria-label="Align center">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg>
+                    </button>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('justifyRight'); setActiveTab(this)" aria-label="Align right">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+                    </button>
+                    <span class="toolbar-sep"></span>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('removeFormat'); setActiveTab(this)" aria-label="Clear format">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                    </button>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('undo'); setActiveTab(this)" aria-label="Undo">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    </button>
+                    <button class="toolbar-tab-btn" onclick="execNoteCmd('redo'); setActiveTab(this)" aria-label="Redo">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    </button>
+                </div>
+
+                <!-- Modern Note Editor -->
+                <div class="notes-editor" id="modernNoteEditor">
+                    <div class="editor-row">
+                        <input type="text" id="noteTitleInput" placeholder="Note Title" aria-label="Note title" class="note-title-input" oninput="autoCapitalize(this); noteAutoSave()" data-i18n-ph="notes.noteTitle">
+                        <button class="btn-note-save" onclick="saveNoteFromEditor()" aria-label="Save note">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        </button>
+                    </div>
+                    <div contenteditable="true" id="noteContentEditor" class="note-editor-area" data-placeholder="What's on your mind?" oninput="noteAutoSave(); updateNoteWordCount(); autoCapitalizeEditor(this)" data-i18n-dp="notes.placeholder"></div>
+                    <div class="editor-footer">
+                        <span id="noteCharCount">0 characters</span>
+                        <span id="noteWordCount">0 words</span>
+                        <span id="noteSaveStatus">Autosaved</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS -->
+            <div id="route-settings" class="view-section">
+                <div class="flex-row settings-header" style="justify-content:center; position:relative;">
+                    <h2 class="settings-title" data-i18n="settings.title">Settings</h2>
+                    <button class="fp-close" style="position:absolute; right:0; background:transparent;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted);padding:0 0.3rem;font-family:var(--font-family);" onclick="closeSettingsMenu()" aria-label="Close settings"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+
+                <div class="profile-section">
+                    <div class="ps-title" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Password</span>
+                        <span id="passStatusBadge" style="font-size:0.5rem; font-weight:var(--font-weight-black); padding:0.15rem 0.5rem; border-radius:var(--radius-full); background:var(--red); color:#fff; letter-spacing:0.05em;">INACTIVE</span>
+                    </div>
+                    <div id="passActions" style="display:none; flex-direction:row; gap:0.3rem;">
+                        <button type="button" class="settings-pass-btn" onclick="showChangePassFields()" style="flex:1;">Change Password</button>
+                        <button type="button" class="settings-pass-btn settings-pass-remove" onclick="settingsRemovePassword()" style="flex:1;">Remove</button>
+                    </div>
+                    <div id="passwordFields" style="display:none; flex-direction:column; gap:0.6rem;">
+                        <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" id="settingsNewPassWrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <input id="settingsNewPass" type="password" placeholder="New password" autocomplete="new-password" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                            <button type="button" onclick="toggleSettingsPass('settingsNewPass','settingsNewPassEyeOff','settingsNewPassEyeOn')" style="background:none; border:none; padding:0; cursor:pointer; display:flex; align-items:center; flex-shrink:0;">
+                                <svg id="settingsNewPassEyeOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted);"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                <svg id="settingsNewPassEyeOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--accent); display:none;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+                        <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" id="settingsConfirmPassWrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <input id="settingsConfirmPass" type="password" placeholder="Confirm new password" autocomplete="new-password" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                            <button type="button" onclick="toggleSettingsPass('settingsConfirmPass','settingsConfirmPassEyeOff','settingsConfirmPassEyeOn')" style="background:none; border:none; padding:0; cursor:pointer; display:flex; align-items:center; flex-shrink:0;">
+                                <svg id="settingsConfirmPassEyeOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted);"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                <svg id="settingsConfirmPassEyeOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--accent); display:none;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
+                        <button type="button" class="settings-pass-btn" onclick="settingsSetPassword()">Set Password</button>
+                    </div>
+                </div>
+
+                <div id="resetPinDisplay" class="profile-section" style="display:none; flex-direction:column; align-items:stretch;">
+                    <div class="ps-title" style="margin-bottom:0.4rem;">Reset PIN</div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; background:var(--surface-2); border:1px solid var(--border-light); border-radius:var(--radius-md); padding:0.6rem 0.8rem;">
+                        <span style="font-family:monospace; font-size:1rem; font-weight:var(--font-weight-black); color:var(--text-main); letter-spacing:0.12em; flex:1; text-align:center; white-space:nowrap;" id="resetPinValue"></span>
+                        <button type="button" onclick="copyResetPin()" style="background:var(--accent-light); border:none; border-radius:var(--radius-sm); padding:0.4rem 0.7rem; font-size:0.6rem; font-weight:var(--font-weight-bold); color:var(--accent); cursor:pointer; font-family:var(--font-family); flex-shrink:0;">Copy</button>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:0.35rem; margin-top:0.4rem;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" style="width:13px; height:13px; flex-shrink:0; margin-top:2px;"><path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span style="font-size:0.55rem; color:var(--text-muted); line-height:1.4;">Save this PIN somewhere safe. Use it to reset your password if you forget it.</span>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="ps-title" data-i18n="settings.preferences">Preferences</div>
+                    <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                        <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" class="prof-field-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                            <select id="settingsLanguage" onchange="setProfileLanguage(this.value)" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                                <option value="en" data-i18n="settings.lang.en">English</option>
+                                <option value="ur" data-i18n="settings.lang.ur">Urdu</option>
+                                <option value="ar" data-i18n="settings.lang.ar">Arabic</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" class="prof-field-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                            <select id="settingsCurrency" onchange="setCurrency(this.value)" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                                <option value="PKR">PKR &#8372;</option>
+                                <option value="USD">USD $</option>
+                                <option value="EUR">EUR &#8364;</option>
+                                <option value="GBP">GBP &#163;</option>
+                                <option value="INR">INR &#8377;</option>
+                                <option value="AED">AED</option>
+                                <option value="SAR">SAR</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-section profile-danger">
+                    <div class="ps-title danger" data-i18n="settings.dangerZone">Danger Zone</div>
+                    <div class="dz-text" data-i18n="settings.dangerText">Deleting your data permanently removes all grids, ledgers, notes, pictures and settings. This action cannot be undone.</div>
+                    <button type="button" class="dz-delete" onclick="deleteAccount()" data-i18n="settings.deleteAccount">Delete All Data</button>
+                </div>
+            </div>
+
+            <!-- ===== CONSOLE ENGINE ===== -->
+            <div id="route-console" class="view-section">
+                <div class="ce-page-header">
+                    <div class="ce-page-title" id="cePageTitle">GRID</div>
+                    <button class="ce-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+
+                <div id="ce-view-grid" class="ce-view-section ce-active">
+                    <div class="ce-scroll">
+                        <div class="ce-themed-box">
+                            <span class="ce-sub-lbl" style="text-align:left;" data-i18n="console.createGrid">Create Grid Console</span>
+                            <span class="ce-sub-lbl" style="text-align:left;" data-i18n="console.name">Name</span>
+                            <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <input type="text" id="ceNameGrid" class="ce-input" placeholder="Console Name" data-clear-on-close data-i18n-ph="console.namePh" style="border:none; background:transparent; padding:0.65rem 0.5rem;">
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                                <div>
+                                    <span class="ce-sub-lbl" data-i18n="console.type" style="text-align:center;">Type</span>
+                                    <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                                        <select id="ceConsoleTypeGrid" class="ce-select" onchange="ceUpdateGridStatesGrid()" style="flex:1; border:none; background:transparent; padding:0.65rem 0.5rem; font-size:0.85rem; font-weight:var(--font-weight-bold); color:var(--text-main); font-family:var(--font-family); outline:none;"></select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="ce-sub-lbl" data-i18n="console.state" style="text-align:center;">State</span>
+                                    <div id="ceStateSetDisplayGrid" class="ce-state-chip-set"></div>
+                                </div>
+                            </div>
+                            <button class="ce-btn ce-btn-generate" onclick="ceGenConsoleGrid()" data-i18n="console.genGrid">GENERATE GRID</button>
+                        </div>
+                        <div class="ce-themed-box-sm" style="background:var(--app-bg);">
+                            <div style="text-align:center; font-size:0.5rem; color:var(--text-muted);" data-i18n="console.gridInfo">Grid consoles track daily status (attendance, tasks, etc.) with visual calendar view.</div>
+                        </div>
+                        <div class="ce-themed-box ce-list-container">
+                            <div class="ce-list-header">
+                                <span class="ce-list-title" data-i18n="console.gridModules">Grid Modules</span>
+                                <span class="ce-list-count" id="ceGridCount">0</span>
+                            </div>
+                            <div id="ceGridModuleList" class="ce-vert-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ce-view-finance" class="ce-view-section">
+                    <div class="ce-scroll">
+                        <div class="ce-themed-box">
+                            <span class="ce-sub-lbl" data-i18n="console.createFinance">Create Finance Ledger</span>
+                            <span class="ce-sub-lbl" style="text-align:left;" data-i18n="console.name">Name</span>
+                            <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                                <input type="text" id="ceNameFinance" class="ce-input" placeholder="Console Name" data-clear-on-close data-i18n-ph="console.namePh" style="border:none; background:transparent; padding:0.65rem 0.5rem;">
+                            </div>
+                            <button class="ce-btn ce-btn-generate" onclick="ceGenConsoleFinance()" data-i18n="console.genLedger">GENERATE LEDGER</button>
+                        </div>
+                        <div class="ce-themed-box-sm" style="background:var(--app-bg);">
+                            <div style="text-align:center; font-size:0.5rem; color:var(--text-muted);" data-i18n="console.finInfo">Finance ledgers track expenses, income, and budgets with detailed entries.</div>
+                        </div>
+                        <div class="ce-themed-box ce-list-container">
+                            <div class="ce-list-header">
+                                <span class="ce-list-title" data-i18n="console.finModules">Finance Modules</span>
+                                <span class="ce-list-count" id="ceFinanceCount">0</span>
+                            </div>
+                            <div id="ceFinanceModuleList" class="ce-vert-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ce-view-budget" class="ce-view-section">
+                    <div class="ce-scroll">
+                        <div class="ce-themed-box">
+                            <span class="ce-sub-lbl" data-i18n="console.createBudget">Create New Budget</span>
+                            <span class="ce-sub-lbl" style="text-align:left;" data-i18n="console.name">Name</span>
+                            <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                                <input type="text" id="ceBudgetNameB" class="ce-input" placeholder="Budget Name" data-clear-on-close data-i18n-ph="console.budgetPh" style="border:none; background:transparent; padding:0.65rem 0.5rem;">
+                            </div>
+                            <button class="ce-btn ce-btn-generate" onclick="ceGenBudgetB()" data-i18n="console.gen">GENERATE</button>
+                        </div>
+                        <div class="ce-themed-box-sm" style="background:var(--app-bg);">
+                            <div style="text-align:center; font-size:0.5rem; color:var(--text-muted);" data-i18n="console.budgetInfo">Budgets help you allocate funds across different categories.</div>
+                        </div>
+                        <div class="ce-themed-box ce-list-container">
+                            <div class="ce-list-header">
+                                <span class="ce-list-title" data-i18n="console.budgetCats">Budget Categories</span>
+                                <span class="ce-list-count" id="ceBudgetCount">0</span>
+                            </div>
+                            <div id="ceBudgetList" class="ce-vert-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ce-view-category" class="ce-view-section">
+                    <div class="ce-scroll">
+                        <div class="ce-themed-box">
+                            <span class="ce-sub-lbl" data-i18n="console.createCat">Add New Category</span>
+                            <span class="ce-sub-lbl" style="text-align:left;" data-i18n="console.name">Name</span>
+                            <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                                <input type="text" id="ceCatInpC" class="ce-input" placeholder="Category Name" data-clear-on-close data-i18n-ph="console.catPh" style="border:none; background:transparent; padding:0.65rem 0.5rem;">
+                            </div>
+                            <button class="ce-btn ce-btn-blue" onclick="ceAddCatC()" data-i18n="console.addCat">Add Category</button>
+                        </div>
+                        <div class="ce-themed-box-sm" style="background:var(--app-bg);">
+                            <div style="text-align:center; font-size:0.5rem; color:var(--text-muted);" data-i18n="console.catInfo">Categories organize your ledger entries for better tracking and reporting.</div>
+                        </div>
+                        <div class="ce-themed-box ce-list-container">
+                            <div class="ce-list-header">
+                                <span class="ce-list-title" data-i18n="console.ledgerCats">Ledger Categories</span>
+                                <span class="ce-list-count" id="ceCategoryCount">0</span>
+                            </div>
+                            <div id="ceCategoryList" class="ce-vert-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ce-view-status" class="ce-view-section">
+                    <div class="ce-scroll">
+                        <div class="ce-themed-box">
+                            <span class="ce-sub-lbl" style="text-align:left;" data-i18n="console.name">Name</span>
+                            <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                <input type="text" id="ceSetNameS" class="ce-input" placeholder="Insert Name" data-clear-on-close data-i18n-ph="console.insertName" style="border:none; background:transparent; padding:0.65rem 0.5rem;">
+                            </div>
+
+                            <div class="ce-status-editor" id="ceStatusEditor">
+                                <div class="ce-state-row" data-row="0">
+                                    <span class="ce-state-label">State 1</span>
+                                    <input type="text" class="ce-state-name" id="ceStateName0" name="ceStateName0" placeholder="Insert" data-index="0" maxlength="20" oninput="ceUpdateStatusPreview(); autoCapitalize(this)" data-i18n-ph="console.insert">
+                                    <select class="ce-color-select" id="ceColorSelect0" name="ceColorSelect0" data-index="0" data-cd-skip onchange="ceUpdateStatusPreview()"></select>
+                                    <div class="ce-color-preview" data-index="0" title="Click to change color" data-i18n-title="console.colorHint"></div>
+                                </div>
+                                <div class="ce-state-row" data-row="1">
+                                    <span class="ce-state-label">State 2</span>
+                                    <input type="text" class="ce-state-name" id="ceStateName1" name="ceStateName1" placeholder="Insert" data-index="1" maxlength="20" oninput="ceUpdateStatusPreview(); autoCapitalize(this)" data-i18n-ph="console.insert">
+                                    <select class="ce-color-select" id="ceColorSelect1" name="ceColorSelect1" data-index="1" data-cd-skip onchange="ceUpdateStatusPreview()"></select>
+                                    <div class="ce-color-preview" data-index="1" title="Click to change color" data-i18n-title="console.colorHint"></div>
+                                </div>
+                                <div class="ce-state-row" data-row="2">
+                                    <span class="ce-state-label">State 3</span>
+                                    <input type="text" class="ce-state-name" id="ceStateName2" name="ceStateName2" placeholder="Insert" data-index="2" maxlength="20" oninput="ceUpdateStatusPreview(); autoCapitalize(this)" data-i18n-ph="console.insert">
+                                    <select class="ce-color-select" id="ceColorSelect2" name="ceColorSelect2" data-index="2" data-cd-skip onchange="ceUpdateStatusPreview()"></select>
+                                    <div class="ce-color-preview" data-index="2" title="Click to change color" data-i18n-title="console.colorHint"></div>
+                                </div>
+                                <div class="ce-state-row" data-row="3">
+                                    <span class="ce-state-label">State 4</span>
+                                    <input type="text" class="ce-state-name" id="ceStateName3" name="ceStateName3" placeholder="Insert" data-index="3" maxlength="20" oninput="ceUpdateStatusPreview(); autoCapitalize(this)" data-i18n-ph="console.insert">
+                                    <select class="ce-color-select" id="ceColorSelect3" name="ceColorSelect3" data-index="3" data-cd-skip onchange="ceUpdateStatusPreview()"></select>
+                                    <div class="ce-color-preview" data-index="3" title="Click to change color" data-i18n-title="console.colorHint"></div>
+                                </div>
+                                <div class="ce-state-row" data-row="4">
+                                    <span class="ce-state-label">State 5</span>
+                                    <input type="text" class="ce-state-name" id="ceStateName4" name="ceStateName4" placeholder="Insert" data-index="4" maxlength="20" oninput="ceUpdateStatusPreview(); autoCapitalize(this)" data-i18n-ph="console.insert">
+                                    <select class="ce-color-select" id="ceColorSelect4" name="ceColorSelect4" data-index="4" data-cd-skip onchange="ceUpdateStatusPreview()"></select>
+                                    <div class="ce-color-preview" data-index="4" title="Click to change color" data-i18n-title="console.colorHint"></div>
+                                </div>
+
+                                <div style="display:flex; gap:0.3rem;">
+                                    <button class="ce-btn ce-btn-generate" onclick="ceGenerateStatusColors()" style="flex:1;" data-i18n="console.genColors">GENERATE</button>
+                                    <button class="ce-btn ce-btn-generate" onclick="ceAddCustomStatusSetS()" style="flex:1;" data-i18n="console.add">ADD</button>
+                                </div>
+
+                                <div class="ce-live-preview" id="ceLivePreview">
+                                    <span class="ce-preview-empty" data-i18n="console.noStates">No states defined yet</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ce-themed-box-sm" style="background:var(--app-bg);">
+                            <div style="text-align:center; font-size:0.5rem; color:var(--text-muted);" data-i18n="console.statusInfo">Custom status sets extend Grid consoles with your own state definitions and colors.</div>
+                        </div>
+
+                        <div class="ce-themed-box ce-list-container">
+                            <div class="ce-list-header">
+                                <span class="ce-list-title" data-i18n="console.statusSets">Custom Status Sets</span>
+                                <span class="ce-list-count" id="ceStatusCount">0</span>
+                            </div>
+                            <div id="ceStatusSetList" class="ce-vert-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECYCLE BIN - redesigned -->
+            <div id="route-recycle" class="fullpage-view">
+                <div class="recycle-header" id="recycleHeader">
+                    <div class="rh-top">
+                        <span class="rh-title" data-i18n="recycle.title">RECYCLE BIN</span>
+                        <button class="fp-close" onclick="navRoute('home')" aria-label="Close" style="background:transparent;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted);padding:0 0.3rem;font-family:var(--font-family);"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                    </div>
+                    <div class="rh-toolbar">
+                        <div class="rh-row-filters">
+                            <div class="rh-drop">
+                                <svg class="rh-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                                <select id="recycleFilterType" onchange="renderRecycleBin()" aria-label="Filter by type">
+                                    <option value="all" data-i18n="recycle.all">All Types</option>
+                                    <option value="module" data-i18n="recycle.module">Modules</option>
+                                    <option value="ledger" data-i18n="recycle.ledger">Ledger Entries</option>
+                                    <option value="note" data-i18n="recycle.note">Notes</option>
+                                    <option value="picture" data-i18n="recycle.picture">Pictures</option>
+                                    <option value="budget" data-i18n="recycle.budget">Budgets</option>
+                                    <option value="category" data-i18n="recycle.category">Categories</option>
+                                    <option value="status" data-i18n="recycle.status">Status Sets</option>
+                                    <option value="gridRecord" data-i18n="recycle.gridRecord">Grid Records</option>
+                                    <option value="archive" data-i18n="recycle.archive">Archives</option>
+                                    <option value="expense" data-i18n="recycle.expense">Expenses</option>
+                                    <option value="calcRecord" data-i18n="recycle.calcRecord">Calculator Records</option>
+                                    <option value="ageRecord" data-i18n="recycle.ageRecord">Age Records</option>
+                                    <option value="printDoc" data-i18n="recycle.printDoc">Print Documents</option>
+                                </select>
+                            </div>
+                            <div class="rh-drop">
+                                <svg class="rh-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="8" y2="18"/></svg>
+                                <select id="recycleSortBy" onchange="renderRecycleBin()" aria-label="Sort by">
+                                    <option value="newest" data-i18n="recycle.newest">Newest</option>
+                                    <option value="oldest" data-i18n="recycle.oldest">Oldest</option>
+                                    <option value="name" data-i18n="recycle.name">Name</option>
+                                    <option value="type" data-i18n="recycle.type">Type</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="rh-row-actions">
+                            <button class="rh-btn" onclick="toggleRecycleSelectAll()" aria-label="Select all" title="Select all">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                <span>Select</span>
+                            </button>
+                            <button class="rh-btn rh-success" onclick="restoreSelectedRecycle()" aria-label="Restore selected" title="Restore selected">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                                <span>Restore</span>
+                            </button>
+                            <button class="rh-btn rh-danger" onclick="deleteSelectedRecycle()" aria-label="Delete selected" title="Delete selected">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                <span>Delete</span>
+                            </button>
+                            <button class="rh-btn rh-danger" onclick="emptyRecycleBin()" aria-label="Empty recycle bin" title="Empty recycle bin">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 19 9-9-3-3-9 9-2 6 6-2z"/><path d="m5 4 6 6"/><path d="m4 20 3-3"/></svg>
+                                <span>Empty</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="rh-card-top"><span class="rh-top-count-label">Total Items</span> <span class="rh-top-count"><span id="recycleTotalCount">00</span></span></div>
+                <div class="recycle-list" id="recycleList"></div>
+                <div class="rh-total-bar"><span class="rh-expire-note">Items auto-delete after 30 days</span></div>
+            </div>
+
+            <!-- STORAGE - Parent with child pages -->
+            <div id="route-storage" class="fullpage-view">
+                <div class="fp-header" style="display:flex; align-items:center; justify-content:center; position:relative;">
+                    <h2 id="storagePageTitle" style="margin:0; font-size:1rem; color:var(--accent); font-family:var(--font-family);">EOM ARCHIVES</h2>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close" style="position:absolute; right:0; background:transparent;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-muted);padding:0 0.3rem;font-family:var(--font-family);"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body">
+                    <!-- EOM Archives -->
+                    <div id="storage-eom" class="storage-child-page active">
+                        <div class="flex-row" style="margin-bottom:0.2rem; align-items:center; justify-content:space-between; width:100%;">
+                            <h3 class="sub-lbl" style="font-size:0.65rem; color:var(--accent); margin:0;" data-i18n="storage.eom">End of Month Archives</h3>
+                            <div class="flex-row" style="align-items:center; gap:0.3rem;">
+                                <span style="font-size:0.55rem; color:var(--text-muted); font-family:var(--font-family);" data-i18n="storage.total">Total:</span>
+                                <span id="eomTotal" style="font-size:0.7rem; font-weight:var(--font-weight-black); color:var(--text-main); font-family:var(--font-family); line-height:1;">00</span>
+                            </div>
+                        </div>
+                        <div id="archiveListFull" class="flex-col" style="max-height:300px; overflow-y:auto;"></div>
+                    </div>
+                    <!-- Notes Storage -->
+                    <div id="storage-notes" class="storage-child-page">
+                        <div class="flex-row" style="margin-bottom:0.2rem; align-items:center; justify-content:space-between; width:100%;">
+                            <h3 class="sub-lbl" style="font-size:0.65rem; color:var(--accent); margin:0;" data-i18n="storage.notes">Notes</h3>
+                            <div class="flex-row" style="align-items:center; gap:0.3rem;">
+                                <span style="font-size:0.55rem; color:var(--text-muted); font-family:var(--font-family);" data-i18n="storage.total">Total:</span>
+                                <span id="notesStorageTotal" style="font-size:0.7rem; font-weight:var(--font-weight-black); color:var(--text-main); font-family:var(--font-family); line-height:1;">00</span>
+                            </div>
+                        </div>
+                        <div id="notesStorageListFull" class="flex-col" style="max-height:300px; overflow-y:auto;"></div>
+                    </div>
+                    <!-- Pictures -->
+                    <div id="storage-pictures" class="storage-child-page">
+                        <div class="flex-row" style="margin-bottom:0.2rem; align-items:center; justify-content:flex-end; width:100%;">
+                            <div class="flex-row" style="align-items:center; gap:0.3rem;">
+                                <span style="font-size:0.55rem; color:var(--text-muted); font-family:var(--font-family);" data-i18n="storage.total">Total:</span>
+                                <span id="picturesTotal" style="font-size:0.7rem; font-weight:var(--font-weight-black); color:var(--text-main); font-family:var(--font-family); line-height:1;">00</span>
+                            </div>
+                        </div>
+                        <div id="picListFull" class="flex-col" style="max-height:300px; overflow-y:auto;"></div>
+                        <div id="picRenameCard" style="display:none; margin-top:0.4rem; padding:0.5rem; border:1px solid var(--border-light); border-radius:var(--radius-md); background:var(--surface); width:100%; margin-left:auto; margin-right:auto;">
+                            <div style="font-size:0.75rem; font-weight:var(--font-weight-black); color:var(--text-main); font-family:var(--font-family); letter-spacing:0.03em; margin-bottom:0.4rem;">Rename</div>
+                            <input id="picRenameInput" type="text" placeholder="Enter name..." style="width:100%; padding:0.4rem 0.55rem; border-radius:var(--radius-sm); border:1px solid var(--border-light); background:var(--surface); color:var(--text-main); font-size:0.7rem; font-family:var(--font-family); outline:none; margin-bottom:0.4rem; box-sizing:border-box;">
+                            <div style="display:flex; gap:0.4rem;">
+                                <button class="btn-no-bg" onclick="confirmPicRename()" style="flex:1; font-size:0.65rem; font-weight:var(--font-weight-bold); font-family:var(--font-family); padding:0.4rem 0; border:1px solid var(--border-light); border-radius:var(--radius-sm);">Update</button>
+                                <button class="btn-no-bg" onclick="cancelPicRename()" style="flex:1; font-size:0.65rem; font-weight:var(--font-weight-bold); font-family:var(--font-family); padding:0.4rem 0; border:1px solid var(--border-light); border-radius:var(--radius-sm);">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRINT -->
+            <div id="route-print" class="fullpage-view">
+                <div class="fp-header print-header">
+                    <div class="print-title-row">
+                        <h2 class="print-title" data-i18n="print.title">PRINT</h2>
+                        <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                    </div>
+                </div>
+                <div class="print-stats">
+                    <span class="ps-tile"><span class="ps-val" id="printDocCount">0</span><span class="ps-lbl" data-i18n="print.docs">Documents</span></span>
+                    <span class="ps-tile"><span class="ps-val" id="printPdfCount">0</span><span class="ps-lbl" data-i18n="print.pdfs">PDFs</span></span>
+                    <span class="ps-tile"><span class="ps-val" id="printReportCount">0</span><span class="ps-lbl" data-i18n="print.reports">Reports</span></span>
+                </div>
+                <div class="fp-body">
+                    <div class="themed-box-sm b-gray flex-col print-box">
+                        <h3 class="sub-lbl print-box-lbl" data-i18n="print.mode">PDF / Print</h3>
+                        <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <select id="printPageMode" class="print-select" aria-label="Print mode" style="flex:1; border:none; background:transparent; padding:0.65rem 0.5rem; font-size:0.85rem; font-weight:var(--font-weight-bold); color:var(--text-main); font-family:var(--font-family); outline:none;">
+                                <option value="export" data-i18n="print.export">Export PDF</option>
+                                <option value="print" data-i18n="print.direct">Direct Print</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="themed-box-sm b-gray flex-col print-box">
+                        <h3 class="sub-lbl print-box-lbl">Single Archive</h3>
+                        <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+                            <select id="printSingleOption" class="print-select" aria-label="Single archive options" style="flex:1; border:none; background:transparent; padding:0.65rem 0.5rem; font-size:0.85rem; font-weight:var(--font-weight-bold); color:var(--text-main); font-family:var(--font-family); outline:none;"></select>
+                        </div>
+                        <button class="print-gen-btn" onclick="execSinglePrint()">Generate</button>
+                    </div>
+                    <div class="themed-box-sm b-gray flex-col print-box">
+                        <h3 class="sub-lbl print-box-lbl">Global Archive</h3>
+                        <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                            <select id="printGlobalOption" class="print-select" aria-label="Global archive options" style="flex:1; border:none; background:transparent; padding:0.65rem 0.5rem; font-size:0.85rem; font-weight:var(--font-weight-bold); color:var(--text-main); font-family:var(--font-family); outline:none;">
+                                <option value="global">Global System Archive</option>
+                                <option value="global_grids">Global Grids Archive</option>
+                                <option value="global_finance">Global Finance Archive</option>
+                            </select>
+                        </div>
+                        <button class="print-gen-btn" onclick="execGlobalSelectedPrint()">Generate</button>
+                    </div>
+                    <div class="themed-box-sm b-gray flex-col print-box">
+                        <h3 class="sub-lbl print-box-lbl">Reports</h3>
+                        <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M21 12v-2a5 5 0 00-5-5H8a5 5 0 00-5 5v2"/><circle cx="12" cy="16" r="5"/><path d="M12 11v5"/><path d="M9 16l3-3 3 3"/></svg>
+                            <select id="printExpenseOption" class="print-select" aria-label="Expense report source" style="flex:1; border:none; background:transparent; padding:0.65rem 0.5rem; font-size:0.85rem; font-weight:var(--font-weight-bold); color:var(--text-main); font-family:var(--font-family); outline:none;">
+                                <option value="grid">Grid Records</option>
+                                <option value="finance">Finance Records</option>
+                            </select>
+                        </div>
+                        <button class="print-gen-btn" onclick="execExpensePrint()">Generate Report</button>
+                    </div>
+                    <div class="themed-box-sm b-gray flex-col print-box">
+                        <div class="print-history-head">
+                            <h3 class="sub-lbl print-box-lbl" style="margin:0;" data-i18n="print.history">Print History</h3>
+                            <span class="print-history-total"><span data-i18n="print.total">Total:</span> <span id="printHistoryTotal">0</span></span>
+                        </div>
+                        <div id="printHistoryList" class="flex-col"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROFILE - Complete Account System -->
+            <div id="route-profile" class="fullpage-view">
+                <div class="profile-header">
+                    <div class="profile-title" data-i18n="profile.title">Profile</div>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body">
+                    <div class="profile-header-card">
+                        <div class="profile-avatar-wrap" id="profileAvatarWrap">
+                            <button type="button" class="profile-avatar-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                            <div class="profile-avatar" id="profileAvatarBig">
+                                <span id="profileAvatarText">U</span>
+                            </div>
+                            <input type="file" id="profilePhotoInput" accept="image/*" hidden onchange="handleProfilePhotoUpload(event)">
+                            <button type="button" class="profile-photo-overlay" onclick="D.getElementById('profilePhotoInput').click()" aria-label="Change photo">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                <span data-i18n="profile.changePhoto">Change Photo</span>
+                            </button>
+                        </div>
+                        <div class="profile-info">
+                            <div class="profile-info-row"><span class="profile-info-label" data-i18n="profile.fullName">Name</span><span class="profile-name" id="profileNameBig">User</span></div>
+                            <div class="profile-info-row"><span class="profile-info-label" data-i18n="profile.username">Username</span><span class="profile-username" id="profileUsernameBig">@username</span></div>
+                            <div class="profile-info-row"><span class="profile-info-label" data-i18n="profile.email">Email</span><span class="profile-username" id="profileEmailBig">-</span></div>
+                            <div class="profile-info-row"><span class="profile-info-label" data-i18n="profile.status">Status</span><span class="profile-status" id="profileStatusBadge">Guest</span></div>
+                            <div class="profile-info-row"><span class="profile-info-label" data-i18n="profile.memberSince">Member Since</span><span class="profile-username" id="profileMemberSinceBig">-</span></div>
+                            <div class="profile-info-row"><span class="profile-info-label" data-i18n="profile.lastLogin">Last Login</span><span class="profile-username" id="profileLastLoginBig">-</span></div>
+                            <div class="profile-info-row"><span class="profile-info-label" data-i18n="profile.storageUsed">Storage</span><span class="profile-username" id="profileStorageBig">0 KB / 10 GB</span></div>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <div class="ps-title" data-i18n="profile.accountInfo">Account Information</div>
+                        <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                            <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" class="prof-field-wrap">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <input id="profInputName" type="text" placeholder="Full Name" autocomplete="off" data-i18n-ph="profile.fullName" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                            </div>
+                            <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" class="prof-field-wrap">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <input id="profInputUsername" type="text" placeholder="Username" autocomplete="username" data-i18n-ph="profile.username" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                            </div>
+                            <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" class="prof-field-wrap">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <input id="profInputEmail" type="email" placeholder="Email" autocomplete="email" data-i18n-ph="profile.email" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                            </div>
+                            <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" class="prof-field-wrap">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                                <input id="profInputPhone" type="tel" placeholder="Phone" autocomplete="tel" data-i18n-ph="profile.phone" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                            </div>
+                            <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" class="prof-field-wrap">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <input id="profInputDob" type="date" required style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none;">
+                            </div>
+                            <div style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;" class="prof-field-wrap">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <select id="profInputGender" style="flex:1; border:none; background:transparent; color:var(--text-main); font-size:0.85rem; padding:0.65rem 0.5rem; font-family:var(--font-family); outline:none; appearance:none;">
+                                    <option value="" data-i18n="profile.gender.na">Prefer not to say</option>
+                                    <option value="male" data-i18n="profile.gender.male">Male</option>
+                                    <option value="female" data-i18n="profile.gender.female">Female</option>
+                                    <option value="other" data-i18n="profile.gender.other">Other</option>
+                                </select>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px; color:var(--text-muted); flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+                            </div>
+                        </div>
+                        <div class="ps-item" style="margin-top:0.5rem;"><span class="ps-label" data-i18n="profile.status">Status</span><span class="ps-value accent" id="profStatus">Active</span></div>
+                        <div class="ps-item"><span class="ps-label" data-i18n="profile.memberSince">Member Since</span><span class="ps-value" id="profMemberSince">-</span></div>
+                    </div>
+
+                    <div class="profile-section">
+                        <div class="ps-title" data-i18n="profile.myData">My App Data</div>
+                        <div class="profile-stats-grid">
+                            <div class="profile-stat"><div class="profile-stat-num" id="profGrids">0</div><div class="profile-stat-label" data-i18n="profile.totalGrids">Total Grids</div></div>
+                            <div class="profile-stat"><div class="profile-stat-num" id="profActiveGrids">0</div><div class="profile-stat-label" data-i18n="profile.activeGrids">Active Grids</div></div>
+                            <div class="profile-stat"><div class="profile-stat-num" id="profLedgers">0</div><div class="profile-stat-label" data-i18n="profile.totalLedgers">Total Ledgers</div></div>
+                            <div class="profile-stat"><div class="profile-stat-num" id="profActiveLedgers">0</div><div class="profile-stat-label" data-i18n="profile.activeLedgers">Active Ledgers</div></div>
+                            <div class="profile-stat"><div class="profile-stat-num" id="profNotes">0</div><div class="profile-stat-label" data-i18n="profile.totalNotes">Total Notes</div></div>
+                        </div>
+                        <div class="profile-storage">
+                            <div class="profile-storage-top"><span class="ps-label" data-i18n="profile.storageUsed">Storage Used</span><span class="profile-storage-num" id="profStorageText">0 KB / 10 GB</span></div>
+                            <div class="profile-storage-bar"><div class="profile-storage-fill" id="profStorageFill"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <div class="ps-title" data-i18n="profile.preferences">Preferences</div>
+                        <div class="tgl-wrap">
+                            <span data-i18n="profile.weeklyReports">Weekly Reports</span>
+                            <div class="cl-toggle-switch">
+                                <label class="cl-switch">
+                                    <input type="checkbox" id="weeklyTglProfile" onchange="toggleWeeklyReports()" />
+                                    <span></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <div class="ps-title" data-i18n="profile.sessionInfo">Session Information</div>
+                        <div class="ps-item"><span class="ps-label" data-i18n="profile.lastLogin">Last Login</span><span class="ps-value" id="profLastLogin">-</span></div>
+                        <div class="ps-item"><span class="ps-label" data-i18n="profile.ip">IP Address</span><span class="ps-value" id="profIp">-</span></div>
+                        <div class="ps-item"><span class="ps-label" data-i18n="profile.device">Device</span><span class="ps-value" id="profDevice">-</span></div>
+                    </div>
+
+                    <div class="profile-footer">
+                        <button type="button" class="profile-footer-btn b-blue" onclick="saveProfileChanges()" data-i18n="profile.save">Save Changes</button>
+                        <button type="button" class="profile-footer-btn b-blue" onclick="cancelProfileChanges()" data-i18n="common.cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- THEME -->
+            <div id="route-theme" class="fullpage-view">
+                <div class="fp-header theme-header">
+                    <h2 data-i18n="theme.title">Theme</h2>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body">
+                    <div class="themed-box-sm b-gray flex-col">
+                        <div class="tgl-wrap">
+                            <span style="font-size:0.85rem;" data-i18n="theme.dark">Dark Theme</span>
+                            <div class="cl-toggle-switch">
+                                <label class="cl-switch">
+                                    <input type="checkbox" id="themeTglFull" onchange="toggleTheme()" />
+                                    <span></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div style="text-align:center; font-size:0.6rem; color:var(--text-muted); font-family:var(--font-family);" data-i18n="theme.desc">Toggle between light and dark mode.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOTIFICATIONS -->
+            <div id="route-notifications" class="fullpage-view">
+                <div class="fp-header notif-header">
+                    <h2 data-i18n="notif.title">Notifications</h2>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body">
+                    <div class="themed-box-sm b-gray flex-col">
+                        <div class="tgl-wrap">
+                            <span style="font-size:0.85rem;" data-i18n="notif.enable">Enable Reminders</span>
+                            <div class="cl-toggle-switch">
+                                <label class="cl-switch">
+                                    <input type="checkbox" id="notifTglFull" onchange="toggleNotifications()" />
+                                    <span></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div style="text-align:center; font-size:0.6rem; color:var(--text-muted); font-family:var(--font-family);" data-i18n="notif.desc">Receive push notifications on your device for pending tasks.</div>
+                    </div>
+                    <div class="themed-box-sm b-gray flex-col" id="notifListFull">
+                        <h3 class="sub-lbl" style="font-size:0.6rem; color:var(--accent); text-align:left; display:flex; align-items:center; justify-content:space-between; margin:0;"><span data-i18n="notif.current">Current Pending Tasks</span> <span id="notifPendingCount" style="display:inline-block; text-align:center; font-size:0.85rem; color:var(--text-main); font-weight:var(--font-weight-black);">00</span></h3>
+                        <div id="notifFullContent" style="font-size:0.65rem; color:var(--text-muted); text-align:left; font-family:var(--font-family);">No pending tasks.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABOUT -->
+            <div id="route-about" class="fullpage-view">
+                <div class="fp-header">
+                    <h2><span data-i18n="menu.about">About</span></h2>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body">
+                    <div class="about-brand">
+                        <div class="about-brand-title">AETHER</div>
+                        <div class="about-brand-version">Version 9.0.6</div>
+                    </div>
+                    <div class="about-desc">
+                        <span data-i18n="about.description">AETHER is an all-in-one personal tracking and productivity PWA designed to manage grids, finance, notes, and analytics — fully offline with local encrypted storage. Built for speed, privacy, and simplicity.</span>
+                    </div>
+                    <div class="about-info-card">
+                        <div class="about-info-row">
+                            <span class="about-info-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+                            <div class="about-info-text">
+                                <span class="about-info-label" data-i18n="about.designedBy">Designed By</span>
+                                <span class="about-info-value">Tabeer Ahmad</span>
+                            </div>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                            <div class="about-info-text">
+                                <span class="about-info-label" data-i18n="about.engine">Engine</span>
+                                <span class="about-info-value" data-i18n="credit">Advanced Tracking Technologies</span>
+                            </div>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>
+                            <div class="about-info-text">
+                                <span class="about-info-label" data-i18n="about.platform">Platform</span>
+                                <span class="about-info-value" data-i18n="about.platformVal">Web - PWA Ready</span>
+                            </div>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                            <div class="about-info-text">
+                                <span class="about-info-label" data-i18n="about.security">Security</span>
+                                <span class="about-info-value" data-i18n="about.securityVal">Local Storage - Encrypted</span>
+                            </div>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+                            <div class="about-info-text">
+                                <span class="about-info-label" data-i18n="about.language">Language</span>
+                                <span class="about-info-value">English</span>
+                            </div>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
+                            <div class="about-info-text">
+                                <span class="about-info-label" data-i18n="about.offline">Offline Support</span>
+                                <span class="about-info-value" data-i18n="about.offlineVal">Full PWA - Works Offline</span>
+                            </div>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                            <div class="about-info-text">
+                                <span class="about-info-label" data-i18n="about.privacy">Privacy</span>
+                                <span class="about-info-value" data-i18n="about.privacyVal">No Server - Data Stays Local</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="about-features-card">
+                        <div class="about-features-title" data-i18n="about.features">Key Features</div>
+                        <div class="about-features-grid">
+                            <div class="about-feature-item">
+                                <span class="about-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>
+                                <span class="about-feature-text" data-i18n="about.featGrids">Grid Tracking</span>
+                            </div>
+                            <div class="about-feature-item">
+                                <span class="about-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+                                <span class="about-feature-text" data-i18n="about.featFinance">Finance Management</span>
+                            </div>
+                            <div class="about-feature-item">
+                                <span class="about-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                                <span class="about-feature-text" data-i18n="about.featNotes">Notes & Docs</span>
+                            </div>
+                            <div class="about-feature-item">
+                                <span class="about-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12v-2a5 5 0 0 0-5-5H8a5 5 0 0 0-5 5v2"/><circle cx="12" cy="16" r="5"/><path d="M12 11v5"/></svg></span>
+                                <span class="about-feature-text" data-i18n="about.featAnalytics">Analytics</span>
+                            </div>
+                            <div class="about-feature-item">
+                                <span class="about-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span>
+                                <span class="about-feature-text" data-i18n="about.featPrint">Print & Export</span>
+                            </div>
+                            <div class="about-feature-item">
+                                <span class="about-feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
+                                <span class="about-feature-text" data-i18n="about.featStorage">Local Storage</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="about-social-row">
+                        <a href="https://t.me/+8zlMO7JYy-4zZDA0" target="_blank" rel="noopener noreferrer" class="about-social-btn about-social-tg" aria-label="Telegram">
+                            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                            <span data-i18n="about.telegram">Telegram</span>
+                        </a>
+                        <a href="https://whatsapp.com/channel/0029Vb8Jf6g9MF929azSK219" target="_blank" rel="noopener noreferrer" class="about-social-btn about-social-wa" aria-label="WhatsApp">
+                            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+                            <span data-i18n="about.whatsapp">WhatsApp</span>
+                        </a>
+                        <a href="https://github.com/FRAGILISTIC-lab" target="_blank" rel="noopener noreferrer" class="about-social-btn about-social-gh" aria-label="GitHub">
+                            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+                            <span data-i18n="about.github">GitHub</span>
+                        </a>
+                    </div>
+                    <div class="about-footer">
+                        <span data-i18n="about.copyright">Copyright &copy; 2026 AETHER. All rights reserved.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CALCULATOR -->
+            <div id="route-calculator" class="fullpage-view">
+                <div class="fp-header">
+                    <h2><span data-i18n="menu.calculator">Calculator</span></h2>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body" style="align-items:center; justify-content:center; flex-direction:column; gap:0.5rem; padding:0.2rem;">
+                    <div class="calc-body">
+                        <div class="calc-screen">
+                            <div class="calc-operation" id="calcOperationFull"></div>
+                            <div class="calc-typed"><span id="calcTypedFull">0</span><span class="blink-me">_</span></div>
+                        </div>
+                        <div class="calc-button-row">
+                            <button type="button" class="button c" onclick="clearCalcFull()" aria-label="Clear">C</button>
+                            <button type="button" class="button l" onclick="signCalcFull()" aria-label="Toggle sign">+/-</button>
+                            <button type="button" class="button l" onclick="percentCalcFull()" aria-label="Percent">%</button>
+                            <button type="button" class="button l" onclick="appendCalcFull('/')" aria-label="Divide">/</button>
+                        </div>
+                        <div class="calc-button-row">
+                            <button type="button" class="button" onclick="appendCalcFull('7')" aria-label="7">7</button>
+                            <button type="button" class="button" onclick="appendCalcFull('8')" aria-label="8">8</button>
+                            <button type="button" class="button" onclick="appendCalcFull('9')" aria-label="9">9</button>
+                            <button type="button" class="button l" onclick="appendCalcFull('*')" aria-label="Multiply">x</button>
+                        </div>
+                        <div class="calc-button-row">
+                            <button type="button" class="button" onclick="appendCalcFull('4')" aria-label="4">4</button>
+                            <button type="button" class="button" onclick="appendCalcFull('5')" aria-label="5">5</button>
+                            <button type="button" class="button" onclick="appendCalcFull('6')" aria-label="6">6</button>
+                            <button type="button" class="button l" onclick="appendCalcFull('-')" aria-label="Subtract">-</button>
+                        </div>
+                        <div class="calc-button-row">
+                            <button type="button" class="button" onclick="appendCalcFull('1')" aria-label="1">1</button>
+                            <button type="button" class="button" onclick="appendCalcFull('2')" aria-label="2">2</button>
+                            <button type="button" class="button" onclick="appendCalcFull('3')" aria-label="3">3</button>
+                            <button type="button" class="button l" onclick="appendCalcFull('+')" aria-label="Add">+</button>
+                        </div>
+                        <div class="calc-button-row">
+                            <button type="button" class="button" onclick="appendCalcFull('.')" aria-label="Decimal point">.</button>
+                            <button type="button" class="button" onclick="appendCalcFull('0')" aria-label="0">0</button>
+                            <button type="button" class="button l" onclick="backCalcFull()" aria-label="Backspace"><</button>
+                            <button type="button" class="button eq" onclick="evalCalcFull()" aria-label="Equals">=</button>
+                        </div>
+                    </div>
+                    <div class="calc-record-card">
+                        <div class="calc-record-title" data-i18n="calc.record">Record</div>
+                        <div class="calc-record-line"></div>
+                        <div class="calc-record-total-row">
+                            <span class="calc-record-total-label" data-i18n="calc.totalItems">Total Items</span>
+                            <span class="calc-record-total-val" id="calcRecordCount">01</span>
+                        </div>
+                        <div class="calc-record-list" id="calcRecordList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AGE CALCULATOR -->
+            <div id="route-age" class="fullpage-view">
+                <div class="fp-header">
+                    <h2><span data-i18n="age.title">Age Calculator</span></h2>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body" style="align-items:center; justify-content:center; flex-direction:column; gap:0.5rem; padding:0.2rem;">
+                    <div class="age-card">
+                        <label class="age-label" for="ageDobInput" data-i18n="age.dob">Date of Birth</label>
+                        <div class="age-input-row">
+                            <input type="text" id="ageDobInput" class="age-input" placeholder="DD/MM/YYYY" aria-label="Date of birth" inputmode="numeric" oninput="formatAgeInput()">
+                            <input type="date" id="ageDobPicker" class="age-picker-hidden" aria-label="Date picker" onchange="ageSyncFromPicker()">
+                        </div>
+                        <button class="age-calc-btn" onclick="calcAge()" data-i18n="age.calc">Calculate</button>
+                        <div class="age-result" id="ageResult"></div>
+                    </div>
+                    <div class="calc-record-card">
+                        <div class="calc-record-title" data-i18n="calc.record">Record</div>
+                        <div class="calc-record-line"></div>
+                        <div class="calc-record-total-row">
+                            <span class="calc-record-total-label" data-i18n="calc.totalItems">Total Items</span>
+                            <span class="calc-record-total-val" id="ageRecordCount">01</span>
+                        </div>
+                        <div class="calc-record-list" id="ageRecordList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONVERTOR -->
+            <div id="route-convertor" class="fullpage-view">
+                <div class="fp-header">
+                    <h2>Convertor</h2>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body" style="align-items:center; flex-direction:column; gap:0; padding:0;">
+                    <div class="conv-wrap">
+                        <div class="conv-tab-scroll">
+                            <div class="conv-tab-row" id="convTabRow">
+                                <button class="conv-tab active" data-cat="length" onclick="setConvCategory('length',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 12H3m18 0l-4-4m4 4l-4 4M3 12l4-4m-4 4l4 4"/></svg><span>Length</span></button>
+                                <button class="conv-tab" data-cat="weight" onclick="setConvCategory('weight',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="5" r="3"/><path d="M6.5 8h11l1.5 13h-14z"/></svg><span>Weight</span></button>
+                                <button class="conv-tab" data-cat="volume" onclick="setConvCategory('volume',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M6 2v6a6 6 0 0 0 12 0V2"/><line x1="4" y1="2" x2="20" y2="2"/></svg><span>Volume</span></button>
+                                <button class="conv-tab" data-cat="temperature" onclick="setConvCategory('temperature',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg><span>Temp</span></button>
+                                <button class="conv-tab" data-cat="speed" onclick="setConvCategory('speed',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg><span>Speed</span></button>
+                                <button class="conv-tab" data-cat="area" onclick="setConvCategory('area',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18"/></svg><span>Area</span></button>
+                                <button class="conv-tab" data-cat="time" onclick="setConvCategory('time',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Time</span></button>
+                                <button class="conv-tab" data-cat="data" onclick="setConvCategory('data',this)"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><span>Data</span></button>
+                            </div>
+                        </div>
+
+                        <div class="conv-body">
+                            <div class="conv-card-box" style="border:none; padding:0; background:transparent;">
+                                <label class="conv-label">From</label>
+                                <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M12 2v20M2 12h20"/></svg>
+                                    <input type="number" id="convInputFrom" class="conv-val-input" placeholder="0" oninput="convertUnit()" style="flex:1; border:none; background:transparent; padding:0.65rem 0.5rem; font-size:1rem; text-align:center;">
+                                    <select id="convSelectFrom" class="conv-unit-select" onchange="convertUnit()" style="border:none; background:transparent; padding:0.5rem 0.3rem; color:var(--accent); appearance:none; -webkit-appearance:none; font-size:0.75rem;"></select>
+                                </div>
+                            </div>
+
+                            <div class="conv-card-box conv-card-to" style="border:none; padding:0; background:transparent;">
+                                <label class="conv-label">To</label>
+                                <div class="prof-field-wrap" style="display:flex; align-items:center; background:var(--surface-2); border:1.5px solid var(--border-med); border-radius:var(--radius-md); padding:0 0.7rem; transition:border-color 0.3s, box-shadow 0.3s;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px; color:var(--text-muted); flex-shrink:0;"><path d="M12 2v20M2 12h20"/></svg>
+                                    <input type="text" id="convInputTo" class="conv-val-input conv-result-val" readonly placeholder="0" style="flex:1; border:none; background:transparent; padding:0.65rem 0.5rem; font-size:1rem; text-align:center;">
+                                    <select id="convSelectTo" class="conv-unit-select" onchange="convertUnit()" style="border:none; background:transparent; padding:0.5rem 0.3rem; color:var(--accent); appearance:none; -webkit-appearance:none; font-size:0.75rem;"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FACTORY RESET -->
+            <div id="route-reset" class="fullpage-view">
+                <div class="fp-header">
+                    <h2 style="color:#007AFF; text-align:center; width:100%;"><span data-i18n="menu.reset">Factory Reset</span></h2>
+                    <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <div class="fp-body" style="justify-content:flex-start; align-items:center;">
+                    <div class="reset-card">
+                        <div class="reset-warn-head">
+                            <span class="reset-warn-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+                            <h3 data-i18n="reset.wipe">Wipe All Data?</h3>
+                        </div>
+                        <p class="reset-desc" data-i18n="reset.desc">This will permanently erase all your data including grids, finance entries, notes, pictures, and settings. This action cannot be undone.</p>
+                        <div class="reset-breakdown">
+                            <div class="reset-break-title" data-i18n="reset.dataTitle">This will permanently remove:</div>
+                            <ul>
+                                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="reset.itemModules">Grid Modules and records</span></li>
+                                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="reset.itemLedgers">Ledger and finance entries</span></li>
+                                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="reset.itemNotes">Notes and scheduled items</span></li>
+                                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="reset.itemPictures">Pictures</span></li>
+                                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="reset.itemBudgets">Budgets, categories and status sets</span></li>
+                                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="reset.itemArchives">Archives, print history and activity log</span></li>
+                                <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="reset.itemSettings">Personalized settings and preferences</span></li>
+                            </ul>
+                        </div>
+                        <label class="reset-check">
+                            <input type="checkbox" id="resetUnderstandChk" onchange="updateResetState()" aria-label="I understand">
+                            <span data-i18n="reset.iUnderstand">I understand this action is permanent and cannot be undone.</span>
+                        </label>
+                        <div class="reset-confirm-label" style="font-size:0.7rem; font-weight:var(--font-weight-black); color:var(--text-main); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.3rem; font-family:var(--font-family);">CONFIRM</div>
+                        <input type="text" id="resetConfirmInput" class="reset-confirm-input" placeholder="Type reset" autocomplete="off" spellcheck="false" oninput="updateResetState()" aria-label="Type reset to confirm">
+                        <button class="reset-btn" id="resetExecuteBtn" onclick="execFullReset()" disabled>RESET</button>
+                        <button class="reset-cancel" onclick="navRoute('home')" data-i18n="common.cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYTICS -->
+            <div id="route-analytics" class="fullpage-view">
+                <div class="analytics-sticky-top">
+                    <div class="fp-header analytics-header">
+                        <h2 class="analytics-title" data-i18n="analytics.title">ANALYTICS</h2>
+                        <button class="fp-close" onclick="navRoute('home')" aria-label="Close"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                    </div>
+                    <div class="analytics-select-row">
+                        <div class="analytics-drop">
+                            <select id="analyticsTimeSelect" aria-label="Time filter" onchange="setAnalyticsFilter(this.value)">
+                                <option value="today" data-i18n="analytics.today">Today</option>
+                                <option value="yesterday" data-i18n="analytics.yesterday">Yesterday</option>
+                                <option value="week" data-i18n="analytics.week">This Week</option>
+                                <option value="month" data-i18n="analytics.month">This Month</option>
+                                <option value="last3" data-i18n="analytics.last3">3 Months</option>
+                                <option value="last6" data-i18n="analytics.last6">6 Months</option>
+                                <option value="year" data-i18n="analytics.year">Year</option>
+                                <option value="all" data-i18n="analytics.all">All Time</option>
+                            </select>
+                            <svg class="analytics-drop-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </div>
+                        <div class="analytics-drop">
+                            <select id="analyticsModuleSelect" aria-label="Module" onchange="setAnalyticsTab(this.value)">
+                                <option value="overview" data-i18n="analytics.overview">Overview</option>
+                                <option value="grids" data-i18n="analytics.grids">Grids</option>
+                                <option value="finance" data-i18n="analytics.finance">Finance</option>
+                                <option value="notes" data-i18n="analytics.notes">Notes</option>
+                                <option value="recycle" data-i18n="analytics.recycle">Recycle</option>
+                            </select>
+                            <svg class="analytics-drop-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fp-body">
+                    <div id="analyticsTab-overview" class="analytics-tab-content">
+                        <div class="analytics-grid" id="analyticsOverviewCards"></div>
+                        <div class="analytics-chart-row" id="analyticsOverviewCharts"></div>
+                    </div>
+                    <div id="analyticsTab-grids" class="analytics-tab-content" style="display:none;">
+                        <div class="analytics-grid" id="analyticsGridCards"></div>
+                        <div class="analytics-chart-row" id="analyticsGridCharts"></div>
+                    </div>
+                    <div id="analyticsTab-finance" class="analytics-tab-content" style="display:none;">
+                        <div class="analytics-grid" id="analyticsFinanceCards"></div>
+                        <div class="analytics-chart-row" id="analyticsFinanceCharts"></div>
+                    </div>
+                    <div id="analyticsTab-notes" class="analytics-tab-content" style="display:none;">
+                        <div class="analytics-grid" id="analyticsNotesCards"></div>
+                        <div class="analytics-chart-row" id="analyticsNotesCharts"></div>
+                    </div>
+                    <div id="analyticsTab-recycle" class="analytics-tab-content" style="display:none;">
+                        <div class="analytics-grid" id="analyticsRecycleCards"></div>
+                        <div class="analytics-chart-row" id="analyticsRecycleCharts"></div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- ===== BOTTOM NAV ===== -->
+        <nav class="bottom-nav">
+            <div class="nav-item" id="nav-home" onclick="navRoute('home')" aria-label="Home">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                <span data-i18n="menu.home">Home</span>
+            </div>
+            <div class="nav-item" id="nav-grids" onclick="navRoute('grids')" aria-label="Grids">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <span data-i18n="menu.grids">Grids</span>
+            </div>
+            <div class="fab-container">
+                <button class="fab" onclick="document.getElementById('camInput').click()" aria-label="Camera">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+            </div>
+            <div class="nav-item" id="nav-finance" onclick="navRoute('finance')" aria-label="Finance">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                <span data-i18n="menu.finance">Finance</span>
+            </div>
+
+            <div class="nav-item" id="nav-notes" onclick="navRoute('notes')" aria-label="Notes">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <span data-i18n="menu.notes">Notes</span>
+            </div>
+        </nav>
+
+        <div id="socialModal" class="modal-overlay">
+            <div class="modal-content b-main">
+                <button class="icon-btn b-red" style="position:absolute; right:0.7rem; top:0.7rem; border:none; background:transparent; color:var(--text-muted);" onclick="closeModal('socialModal')" aria-label="Close social modal">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <h2 style="text-align:center; color:var(--text-main); margin-bottom:0.3rem; font-family:var(--font-family);" data-i18n="social.followUs">Follow Us</h2>
+                <div class="social-grid">
+                    <a href="https://t.me/+8zlMO7JYy-4zZDA0" target="_blank" rel="noopener noreferrer" class="social-btn">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 2L2 9l7 4 12-5z"/><path d="M9 13l-2 8 4-4 6 4 4-11-13-4z"/></svg>
+                        <span data-i18n="about.telegram">Telegram</span>
+                    </a>
+                    <a href="https://whatsapp.com/channel/0029Vb8Jf6g9MF929azSK219" target="_blank" rel="noopener noreferrer" class="social-btn">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                        <span data-i18n="about.whatsapp">WhatsApp</span>
+                    </a>
+                    <a href="https://github.com/FRAGILISTIC-lab" target="_blank" rel="noopener noreferrer" class="social-btn" style="grid-column:span 2;">
+                        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 0.5C5.37 0.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.2 11.4.6.1.8-.3.8-.6v-2.1c-3.34.7-4.04-1.6-4.04-1.6-.54-1.4-1.33-1.7-1.33-1.7-1.09-.7.08-.7.08-.7 1.2.1 1.83 1.2 1.83 1.2 1.07 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2.96-.3 2-.4 3-.4s2.04.1 3 .4c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.7.8 1.2 1.8 1.2 3.1 0 4.5-2.8 5.5-5.5 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.8-1.6 8.2-6.1 8.2-11.4 0-6.6-5.4-12-12-12z"/></svg>
+                        <span data-i18n="about.github">GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Container -->
+        <div class="toast-container" id="toastContainer"></div>
+
+    </div>
+
+    <!-- Dexie.js (IndexedDB wrapper, local) -->
+    <script defer src="dexie.min.js"></script>
+    <!-- DB Layer: schema, migration, async wrappers -->
+    <script defer src="db.js?v=9.5.0"></script>
+    <script defer src="print.js?v=9.5.0"></script>
+    <script defer src="app.js?v=9.5.0"></script>
+    <script defer>
+      if (location.protocol === 'file:' && typeof CanvasJS !== 'undefined' && CanvasJS.Chart) {
+        CanvasJS.Chart.prototype.print = function() {
+          var a = this.exportChart({ toDataURL: true });
+          var w = window.open('');
+          if (w) {
+            w.document.write('<html><body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;"><img src="' + a + '" style="max-width:100%;max-height:100%;"/></body></html>');
+            w.document.close();
+            w.print();
+          }
+        };
+      }
+      if (location.protocol !== 'file:') {
+        var link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = 'manifest.json';
+        document.head.appendChild(link);
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('./sw.js').catch(function() {});
+        }
+      }
+    </script>
+</body>
+</html>
