@@ -1785,15 +1785,6 @@
             if (sessionStorage.getItem('aether-unlocked') === '1') return;
             window.location.href = 'login.html';
         }
-            const lock = D.getElementById('appLockScreen');
-            if (!lock) return;
-            const user = app.settings.userProfile || {};
-            const username = user.username || user.name || 'user';
-            const nameEl = D.getElementById('lockScreenUsername');
-            if (nameEl) nameEl.textContent = username;
-            showPasswordView();
-            lock.style.display = 'flex';
-        }
 
         function toggleLockPassword() {
             const inp = D.getElementById('lockScreenPass');
