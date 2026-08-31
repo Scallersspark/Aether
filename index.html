@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="stylesheet" href="css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=9.5.0">
+    <link rel="stylesheet" href="styles.css?v=9.6.0">
     <!-- Lucide Icons (local) -->
     <script defer src="lucide.min.js"></script>
 
@@ -37,7 +37,7 @@
     <script>
         setTimeout(function(){var s=document.getElementById('splashScreen');if(s){s.style.opacity='0';setTimeout(function(){s.remove()},350);}},8000);
         (function(){
-            var V = '9.5.0';
+            var V = '9.6.0';
             if (window.caches && caches.keys) {
                 caches.keys().then(function(keys){
                     keys.forEach(function(k){ if (k.indexOf('aether-v') === 0 && k !== 'aether-v' + V) caches.delete(k); });
@@ -430,7 +430,7 @@
                         <div style="text-align:center; border-bottom:1px solid var(--border-light); padding:0.5rem 0.6rem 0.35rem;">
                             <h3 style="font-size:0.75rem; color:var(--text-main); margin:0; font-weight:var(--font-weight-black); font-family:var(--font-family); letter-spacing:0.03em; text-align:center;" data-i18n="notify.title">PENDING</h3>
                         </div>
-                        <div id="notifList" class="flex-col" style="font-size:0.65rem; font-weight:var(--font-weight-bold; font-family:var(--font-family); padding:0.3rem 0; text-align:center;">No new tasks.</div>
+                        <div id="notifList" class="flex-col" style="font-size:0.65rem; font-weight:var(--font-weight-bold); font-family:var(--font-family); padding:0.3rem 0; text-align:center;">No new tasks.</div>
                     </div>
                 </div>
 
@@ -1038,7 +1038,7 @@
                                 <span id="profileAvatarText">U</span>
                             </div>
                             <input type="file" id="profilePhotoInput" accept="image/*" hidden onchange="handleProfilePhotoUpload(event)">
-                            <button type="button" class="profile-photo-overlay" onclick="D.getElementById('profilePhotoInput').click()" aria-label="Change photo">
+                            <button type="button" class="profile-photo-overlay" onclick="document.getElementById('profilePhotoInput').click()" aria-label="Change photo">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                 <span data-i18n="profile.changePhoto">Change Photo</span>
                             </button>
@@ -1577,9 +1577,9 @@
     <!-- Dexie.js (IndexedDB wrapper, local) -->
     <script defer src="dexie.min.js"></script>
     <!-- DB Layer: schema, migration, async wrappers -->
-    <script defer src="db.js?v=9.5.0"></script>
-    <script defer src="print.js?v=9.5.0"></script>
-    <script defer src="app.js?v=9.5.0"></script>
+    <script defer src="db.js?v=9.6.0"></script>
+    <script defer src="print.js?v=9.6.0"></script>
+    <script defer src="app.js?v=9.6.0"></script>
     <script defer>
       if (location.protocol === 'file:' && typeof CanvasJS !== 'undefined' && CanvasJS.Chart) {
         CanvasJS.Chart.prototype.print = function() {
@@ -1598,7 +1598,12 @@
         link.href = 'manifest.json';
         document.head.appendChild(link);
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('./sw.js').catch(function() {});
+          navigator.serviceWorker.register('./sw.js?v=' + V).catch(function() {});
+          navigator.serviceWorker.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'SW_UPDATED') {
+              window.location.reload();
+            }
+          });
         }
       }
     </script>

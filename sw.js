@@ -1,4 +1,4 @@
-const APP_VERSION = '9.5.0';
+const APP_VERSION = '9.6.0';
 const CACHE_NAME = 'aether-v' + APP_VERSION;
 const ASSETS = [
   './',
@@ -29,16 +29,17 @@ self.addEventListener('install', e => {
       return Promise.all(
         ASSETS.map(url => cache.add(url).catch(() => {}))
       );
-    })
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    ).then(() => self.clients.matchAll()).then(clients => {
+      clients.forEach(client => client.postMessage({ type: 'SW_UPDATED', version: APP_VERSION }));
+    })
   );
   self.clients.claim();
 });

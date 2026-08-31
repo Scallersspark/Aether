@@ -62,8 +62,9 @@ async function migrateFromLocalStorage() {
     let appData = null;
     try { appData = raw ? JSON.parse(raw) : null; } catch (e) { appData = null; }
 
+    const uid = 'u_legacy';
+
     if (appData) {
-        const uid = 'u_legacy';
         await db.transaction('rw',
             db.grids, db.finance, db.notes, db.pictures, db.settings,
             db.statusSets, db.printHistory, db.recycleBin, db.categories,
