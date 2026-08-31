@@ -1,4 +1,3 @@
-Here's a description for your GitHub repo:
 
 ---
 
@@ -27,7 +26,3 @@ A fully offline-capable Progressive Web App for tracking attendance, finances, n
 **Live:** [scallersspark.github.io/Aether](https://scallersspark.github.io/Aether/)
 
 ---
-
-Feel free to shorten it for the GitHub "About" section. For the short description field, use:
-
-> All-in-one personal tracking & productivity PWA — offline-capable, installable, no server required
