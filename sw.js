@@ -1,4 +1,4 @@
-const APP_VERSION = '9.6.0';
+const APP_VERSION = '9.7.0';
 const CACHE_NAME = 'aether-v' + APP_VERSION;
 const ASSETS = [
   './',
@@ -7,6 +7,12 @@ const ASSETS = [
   './app.js',
   './print.js',
   './db.js',
+  './qrcode.js',
+  './_p8.js',
+  './_p9.js',
+  './login.html',
+  './login.js',
+  './login.css',
   './canvasjs.min.js',
   './dexie.min.js',
   './lucide.min.js',

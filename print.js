@@ -201,8 +201,16 @@ function AP() {
     };
 
     _u.qr = function (d, s) {
-        var u = 'https://api.qrserver.com/v1/create-qr-code/?size=' + (s || 120) + 'x' + (s || 120) + '&data=' + encodeURIComponent(d || '');
-        return '<img src="' + u + '" crossorigin="anonymous" alt="QR" class="ap-qr-sec-img">';
+        try {
+            var modSize = Math.max(2, Math.floor((s || 120) / 40));
+            var qr = QRCode.generate(d || '', QRCode.EC_LEVEL.M);
+            var canvas = document.createElement('canvas');
+            QRCode.toCanvas(qr, canvas, modSize, modSize);
+            var dataUrl = canvas.toDataURL('image/png');
+            return '<img src="' + dataUrl + '" alt="QR" class="ap-qr-sec-img">';
+        } catch (e) {
+            return '<div class="ap-qr-sec-img" style="display:flex;align-items:center;justify-content:center;font-size:8px;color:#94a3b8;background:#f1f5f9;">QR N/A</div>';
+        }
     };
 
     _u.hdr = function () { return ''; };

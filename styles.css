@@ -992,6 +992,29 @@
             outline: 3px solid var(--accent);
             outline-offset: 2px;
         }
+        .tab-btn-scroll {
+            overflow: hidden;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+        .tab-btn-scroll span {
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .tab-btn-scroll span.scroll-active {
+            animation: tab-marquee 6s linear infinite;
+            padding-right: 2em;
+        }
+        @keyframes tab-marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        @media (hover: hover) {
+            .tab-btn-scroll:hover span.scroll-active {
+                animation-play-state: paused;
+            }
+        }
 
         /* ===== CALENDAR GRID ===== */
         .calendar-grid {
@@ -5945,7 +5968,7 @@
             position: absolute;
             top: 0;
             right: 0;
-            width: 150px;
+            width: 50%;
             max-width: 76%;
             height: 100%;
             background: var(--surface);
@@ -5958,7 +5981,7 @@
             will-change: transform;
             font-family: var(--font-family);
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateX(170px);
+            transform: translateX(105%);
         }
         body.dark-theme .drawer-panel {
             box-shadow: -4px 0 30px rgba(0, 0, 0, 0.5);
@@ -6201,6 +6224,7 @@
                 padding: 0.35rem 0.5rem;
                 font-size: 0.55rem;
                 min-height: 32px;
+                overflow: hidden;
             }
             .grid-header-with-drawer .hdr-right .date-picker-wrap {
                 max-width: 140px;
@@ -7210,6 +7234,7 @@
             align-items: center;
             justify-content: center;
             box-shadow: var(--shadow-sm);
+            overflow: hidden;
             transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s, transform 0.15s;
             text-align: center;
             white-space: nowrap;
@@ -8701,7 +8726,8 @@
             .close-slide,
             .rh-btn,
             .drawer-trigger-btn,
-            .tab-btn {
+            .tab-btn,
+            .cam-tool {
                 min-height: var(--control-min-height);
             }
             .nav-item {
@@ -9389,14 +9415,190 @@
             transform: scale(0.96);
         }
 
-        /* ===== DISABLE HOVER EFFECTS ON TOUCH DEVICES ===== */
+        /* ===== MOBILE PERFORMANCE & HOVER FIXES ===== */
         @media (hover: none) and (pointer: coarse) {
-            *:hover,
-            *:hover::before,
-            *:hover::after {
-                transition: none !important;
+            .fab:hover,
+            .fab:active {
+                transform: none;
+                box-shadow: 0 6px 20px rgba(0, 122, 255, 0.35);
+            }
+            .nav-item:hover {
+                color: var(--text-muted);
+            }
+            .icon-btn:hover {
+                background: transparent;
+            }
+            .tab-btn:hover {
+                background: var(--surface);
+            }
+            .drawer-trigger-btn:hover {
+                background: var(--surface);
+            }
+            .slide-item:hover,
+            .ce-dropdown-trigger:hover,
+            .st-dropdown-trigger:hover,
+            .cal-dropdown-trigger:hover,
+            .ce-dropdown-items .slide-item:hover,
+            .st-dropdown-items .slide-item:hover,
+            .cal-dropdown-items .slide-item:hover {
+                background: transparent;
+                transform: none;
+            }
+            .drawer-item:hover {
+                background: transparent;
+            }
+            .close-drawer:hover,
+            .close-slide:hover {
+                background: transparent;
+            }
+            .profile-item:hover {
+                background: transparent;
+            }
+            .sr-item:hover {
+                background: transparent;
+            }
+            .dropdown button:hover {
+                background: transparent;
+            }
+            button:hover {
+                filter: none;
+            }
+            .btn-add:hover,
+            .btn-del:hover,
+            .btn-edit:hover,
+            .btn-edit-sm:hover,
+            .btn-del-sm:hover,
+            .ce-btn:hover,
+            .ce-btn-blue:hover,
+            .ce-btn-red:hover,
+            .ce-btn-generate:hover,
+            .lock-btn:hover,
+            .cam-btn:hover,
+            .cam-tab:hover,
+            .cam-tool:hover,
+            .cam-filter-opt:hover,
+            .cam-sub-btn:hover,
+            .pic-view-opt:hover,
+            .pic-view-orient:hover,
+            .pic-view-close:hover,
+            .social-btn:hover,
+            .calc-btn:hover,
+            .note-card:hover,
+            .btn-note-save:hover,
+            .btn-note-close:hover,
+            .settings-pass-btn:hover,
+            .settings-pass-remove:hover,
+            .arc-btn:hover,
+            .btn-no-bg:hover,
+            .print-gen-btn:hover,
+            .doc-icon-btn:hover,
+            .reset-btn:hover,
+            .reset-cancel:hover,
+            .about-social-btn:hover,
+            .about-social-tg:hover,
+            .about-social-wa:hover,
+            .about-social-gh:hover,
+            .rh-btn:hover,
+            .rc-restore:hover,
+            .rc-delete:hover,
+            .age-picker-btn:hover,
+            .age-calc-btn:hover,
+            .cat-add-row button:hover,
+            .btn-add-to-expense:hover,
+            .btn-add-to-record:hover,
+            .btn-add-to-records:hover,
+            .btn-update-ledger:hover,
+            .btn-cancel-ledger:hover,
+            .btn-del-month:hover,
+            .te-print-btn:hover,
+            .budget-del-btn:hover,
+            .login-submit-btn:hover,
+            .login-guest-btn:hover,
+            .login-back-btn:hover,
+            .fp-close:hover,
+            .cd-opt:hover,
+            .b-blue:hover,
+            .dz-delete:hover {
                 transform: none !important;
                 box-shadow: none !important;
+            }
+        }
+
+        /* ===== MOBILE PERFORMANCE: Disable backdrop-filter, will-change, heavy animations ===== */
+        @media (max-width: 767px) {
+            #slideOverlay,
+            #drawerOverlay,
+            .modal-overlay,
+            .toast,
+            .cam-btn {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            #slideMenu,
+            .drawer-panel {
+                will-change: auto !important;
+            }
+            .day-cell.pending-today {
                 animation: none !important;
+            }
+            .blink-me {
+                animation: none !important;
+            }
+            .form .title::after {
+                animation: none !important;
+            }
+            .cam-tool {
+                padding: 0.5rem 0.4rem;
+                min-width: 42px;
+                min-height: 42px;
+                justify-content: center;
+            }
+            .cam-tool svg {
+                width: 22px;
+                height: 22px;
+            }
+            .cam-tool span {
+                font-size: 0.42rem;
+            }
+            .cam-top-bar {
+                gap: 1px;
+                padding: 0.35rem 0.3rem;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .cam-tab {
+                padding: 0.35rem 0.45rem;
+                min-height: 40px;
+            }
+            .cam-tab svg {
+                width: 16px;
+                height: 16px;
+            }
+            .cam-tab span {
+                font-size: 0.42rem;
+            }
+            .pic-view-opt,
+            .pic-view-orient {
+                padding: 6px 10px;
+                font-size: 0.6rem;
+                min-height: 36px;
+            }
+            .pic-view-bar {
+                padding: 0.3rem 0.4rem;
+                gap: 3px;
+            }
+            .pic-view-row {
+                gap: 3px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .pic-view-label {
+                font-size: 0.45rem;
+            }
+            .pic-view-close {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
             }
         }

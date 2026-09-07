@@ -23,6 +23,10 @@ db.version(1).stores({
     calcRecords:    'key',
     ageRecords:     'key'
 });
+db.version(2).stores({
+    archives:       'key',
+    gridRecords:    'key'
+});
 
 // ---- User context ----
 let _currentUserId = null;
@@ -69,7 +73,7 @@ async function migrateFromLocalStorage() {
             db.grids, db.finance, db.notes, db.pictures, db.settings,
             db.statusSets, db.printHistory, db.recycleBin, db.categories,
             db.modules, db.credentials, db.activityLedger, db.calcRecords,
-            db.ageRecords, db.meta, async () => {
+            db.ageRecords, db.meta, db.archives, db.gridRecords, async () => {
 
             await db.grids.put({ key: uid + ':main', value: appData.grids || {} });
             await db.finance.put({
@@ -183,7 +187,8 @@ async function dbFullInit() {
     const [gridsRow, financeRow, notesRow, picturesRow, settingsRow,
           statusSetsRow, printHistoryRow, recycleBinRow, categoriesRow,
           modulesRow, calcList, calcSeq,
-          ageList, ageSeq, noteDraftRow
+          ageList, ageSeq, noteDraftRow,
+          archivesRow, gridRecordsRow, gridMonthsRow
     ] = await Promise.all([
         db.grids.get(_uk('main')),
         db.finance.get(_uk('main')),
@@ -199,7 +204,10 @@ async function dbFullInit() {
         db.calcRecords.get(_uk('seq')),
         db.ageRecords.get(_uk('list')),
         db.ageRecords.get(_uk('seq')),
-        db.notes.get(_uk('draft'))
+        db.notes.get(_uk('draft')),
+        db.archives.get(_uk('main')),
+        db.gridRecords.get(_uk('main')),
+        db.gridRecords.get(_uk('months'))
     ]);
 
     const activityRows = await db.activityLedger.toArray();
@@ -247,7 +255,10 @@ async function dbFullInit() {
         categoryColors: (cRaw && cRaw.categoryColors) || {},
         categoryEnabled: (cRaw && cRaw.categoryEnabled) || {},
         credentials: null,
-        activityLedger: activityLedger
+        activityLedger: activityLedger,
+        archives: await _dec(archivesRow ? archivesRow.value : {}),
+        gridRecords: await _dec(gridRecordsRow ? gridRecordsRow.value : []),
+        gridMonths: await _dec(gridMonthsRow ? gridMonthsRow.value : {})
     };
 
     return {
@@ -360,7 +371,7 @@ async function dbSaveApp(appData) {
     await db.transaction('rw',
         db.grids, db.finance, db.notes, db.pictures, db.settings,
         db.statusSets, db.printHistory, db.recycleBin, db.categories,
-        db.modules, db.activityLedger, async () => {
+        db.modules, db.activityLedger, db.archives, db.gridRecords, async () => {
 
         await db.grids.put({ key: uid + ':main', value: await _enc(appData.grids || {}) });
 
@@ -418,6 +429,10 @@ async function dbSaveApp(appData) {
 
         await db.modules.put({ key: uid + ':main', value: await _enc(appData.modules || []) });
 
+        await db.archives.put({ key: uid + ':main', value: await _enc(appData.archives || {}) });
+        await db.gridRecords.put({ key: uid + ':main', value: await _enc(appData.gridRecords || []) });
+        await db.gridRecords.put({ key: uid + ':months', value: await _enc(appData.gridMonths || {}) });
+
         if (appData.activityLedger) {
             const months = Object.keys(appData.activityLedger);
             for (const mk of months) {
@@ -440,11 +455,11 @@ async function dbSaveApp(appData) {
 async function dbDeleteUser(userId) {
     const uid = userId;
     const allKeys = [
-        uid + ':main', uid + ':list', uid + ':draft', uid + ':seq'
+        uid + ':main', uid + ':list', uid + ':draft', uid + ':seq', uid + ':months'
     ];
     const allTables = [db.grids, db.finance, db.notes, db.pictures, db.settings,
         db.statusSets, db.printHistory, db.recycleBin, db.categories,
-        db.modules, db.calcRecords, db.ageRecords];
+        db.modules, db.calcRecords, db.ageRecords, db.archives, db.gridRecords];
 
     for (const table of allTables) {
         await Promise.all(allKeys.map(k => table.delete(k).catch(() => {})));
@@ -471,13 +486,14 @@ async function dbClearAll() {
         db.meta, db.grids, db.finance, db.notes, db.pictures, db.settings,
         db.statusSets, db.printHistory, db.recycleBin, db.categories,
         db.modules, db.credentials, db.activityLedger, db.calcRecords,
-        db.ageRecords, async () => {
+        db.ageRecords, db.archives, db.gridRecords, async () => {
         await Promise.all([
             db.meta.clear(), db.grids.clear(), db.finance.clear(),
             db.notes.clear(), db.pictures.clear(), db.settings.clear(),
             db.statusSets.clear(), db.printHistory.clear(), db.recycleBin.clear(),
             db.categories.clear(), db.modules.clear(), db.credentials.clear(),
-            db.activityLedger.clear(), db.calcRecords.clear(), db.ageRecords.clear()
+            db.activityLedger.clear(), db.calcRecords.clear(), db.ageRecords.clear(),
+            db.archives.clear(), db.gridRecords.clear()
         ]);
     });
 }

@@ -282,6 +282,14 @@
             'October', 'November', 'December'
         ];
 
+        const UNITS = ['kg', 'g', 'mg', 'L', 'ml', 'oz', 'lb', 'pcs', 'box', 'bag', 'dozen', 'pair'];
+
+        function buildUnitOpts(selected) {
+            return UNITS.map(u =>
+                `<option value="${u}" ${u === selected ? 'selected' : ''}>${u}</option>`
+            ).join('');
+        }
+
         const STATUS_COLOR_PALETTE = [
             '#34C759', '#FF453A', '#FF9F0A', '#0A84FF', '#30D158',
             '#30D158', '#FF3B30', '#FF9500', '#34C759', '#FF453A',
@@ -328,6 +336,7 @@
             moduleBudgets: {},
             totalExpense: {},
             gridRecords: [],
+            gridMonths: {},
             budgetEnabled: {},
             categoryEnabled: {},
             categoryColors: {},
@@ -450,7 +459,9 @@
 
         function fmtNoComma(num) {
             if (!num && num !== 0) return '0';
-            return Number(num).toFixed(0);
+            const n = Number(num);
+            if (Number.isInteger(n)) return n.toString();
+            return n.toFixed(Math.min(2, (String(n).split('.')[1] || '').length));
         }
 
         const CURRENCY_META = {
@@ -1158,10 +1169,19 @@
         function formatCommaInput(el) {
             let val = el.value.replace(/,/g, '').replace(/[^0-9.]/g, '');
             if (val) {
+                if (val.endsWith('.')) {
+                    const intPart = val.slice(0, -1);
+                    const num = parseFloat(intPart);
+                    if (!isNaN(num) && num > MAX_INPUT_VALUE) { el.value = MAX_INPUT_VALUE.toLocaleString('en-US') + '.'; return; }
+                    el.value = val;
+                    return;
+                }
                 const num = parseFloat(val);
                 if (!isNaN(num)) {
-                    const clamped = Math.min(num, MAX_INPUT_VALUE);
-                    el.value = clamped.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                    if (num > MAX_INPUT_VALUE) { el.value = MAX_INPUT_VALUE.toLocaleString('en-US'); return; }
+                    const decMatch = val.match(/\.(\d*?)0*$/);
+                    const maxFrac = decMatch ? Math.min(2, Math.max(1, decMatch[1].length)) : 0;
+                    el.value = num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: maxFrac });
                     return;
                 }
             }
@@ -2017,6 +2037,27 @@
         function handleDateRollover() {
             const todayStr = localDateStr();
             if (todayStr === currentRenderDateStr) return;
+
+            const prevDate = currentRenderDateStr ? new Date(currentRenderDateStr) : null;
+            const newDate = new Date(todayStr);
+            const monthChanged = prevDate && (prevDate.getFullYear() !== newDate.getFullYear() || prevDate.getMonth() !== newDate.getMonth());
+
+            if (monthChanged && prevDate) {
+                const oldMonthKey = prevDate.getFullYear() + '-' + String(prevDate.getMonth() + 1).padStart(2, '0');
+                app.gridMonths = app.gridMonths || {};
+                app.gridMonths[oldMonthKey] = {};
+                app.modules.filter(m => m.format === 'grid').forEach(m => {
+                    if (app.grids[m.id]) {
+                        app.gridMonths[oldMonthKey][m.id] = {
+                            data: app.grids[m.id].slice(),
+                            stat: app.grids[m.id + '_stat'] || 'No Status'
+                        };
+                        app.grids[m.id] = Array(31).fill('Pending');
+                        delete app.grids[m.id + '_stat'];
+                    }
+                });
+            }
+
             currentRenderDateStr = todayStr;
             const today = currentRenderDateStr;
             app.modules.filter(m => m.format === 'ledger').forEach(m => { m.start = today; });
@@ -2057,6 +2098,8 @@
         }
 
         function navRoute(id) {
+            closeSlideMenu();
+            closeDrawer();
             const fullPageViews = ['recycle', 'storage', 'print', 'profile', 'theme', 'notifications', 'about', 'calculator',
                 'age', 'reset', 'analytics', 'convertor'
             ];
@@ -2066,7 +2109,6 @@
                 D.querySelectorAll('.fullpage-view').forEach(e => e.classList.remove('active'));
                 const section = D.getElementById('route-' + id);
                 if (section) section.classList.add('active');
-                closeSlideMenu();
                 if (history && history.replaceState) history.replaceState(null, '', '#' + id);
                 clearSearch();
                 if (id === 'recycle') renderRecycleBin();
@@ -2093,7 +2135,6 @@
                 D.querySelectorAll('.fullpage-view').forEach(e => e.classList.remove('active'));
                 const section = D.getElementById('route-console');
                 if (section) section.classList.add('active');
-                closeSlideMenu();
                 if (history && history.replaceState) history.replaceState(null, '', '#' + id);
                 clearSearch();
                 setTimeout(function() { ceInitConsoleEngine(); }, 50);
@@ -2871,9 +2912,11 @@
             const shown = active || gridModules.find(m => m.id === lastGridTabId) || gridModules[0] || null;
             let html = `<button class="tab-btn grid-tab-btn ${activeGridTabId === recordsTabId ? 'active' : ''}" id="tabbtn-${recordsTabId}" onclick="switchSubTab('gridContainers', '${recordsTabId}', 'grid-tab-btn', 'grid-cont')">RECORDS</button>`;
             if (shown) {
-                html += `<button class="tab-btn grid-tab-btn ${shown.id === activeGridTabId ? 'active' : ''}" id="tabbtn-${shown.id}" onclick="switchSubTab('gridContainers', '${shown.id}', 'grid-tab-btn', 'grid-cont')">${escapeHtml(shown.title)}</button>`;
+                const ttl = escapeHtml(shown.title);
+                html += `<button class="tab-btn grid-tab-btn ${shown.id === activeGridTabId ? 'active' : ''}" id="tabbtn-${shown.id}" onclick="switchSubTab('gridContainers', '${shown.id}', 'grid-tab-btn', 'grid-cont')"><span class="tab-btn-scroll"><span>${ttl}</span></span></button>`;
             }
             gNav.innerHTML = html;
+            checkTabScroll(gNav);
         }
 
         // ---- renderFinanceNav: RECORDS pinned at left + ledger tab always visible ----
@@ -2888,9 +2931,25 @@
             const shown = active || ledgerModules.find(m => m.id === lastLedgerTabId) || ledgerModules[0] || null;
             let html = `<button class="tab-btn fin-tab-btn ${activeFinTabId === recordsTabId ? 'active' : ''}" id="tabbtn-${recordsTabId}" onclick="switchSubTab('financeContainers', '${recordsTabId}', 'fin-tab-btn', 'fin-cont')">RECORDS</button>`;
             if (shown) {
-                html += `<button class="tab-btn fin-tab-btn ${shown.id === activeFinTabId ? 'active' : ''}" id="tabbtn-${shown.id}" onclick="switchSubTab('financeContainers', '${shown.id}', 'fin-tab-btn', 'fin-cont')">${escapeHtml(shown.title)}</button>`;
+                const ttl = escapeHtml(shown.title);
+                html += `<button class="tab-btn fin-tab-btn ${shown.id === activeFinTabId ? 'active' : ''}" id="tabbtn-${shown.id}" onclick="switchSubTab('financeContainers', '${shown.id}', 'fin-tab-btn', 'fin-cont')"><span class="tab-btn-scroll"><span>${ttl}</span></span></button>`;
             }
             fNav.innerHTML = html;
+            checkTabScroll(fNav);
+        }
+
+        function checkTabScroll(container) {
+            requestAnimationFrame(function() {
+                var scrolls = container.querySelectorAll('.tab-btn-scroll');
+                for (var i = 0; i < scrolls.length; i++) {
+                    var wrap = scrolls[i];
+                    var inner = wrap.querySelector('span');
+                    if (!inner) continue;
+                    if (inner.scrollWidth > wrap.offsetWidth + 2) {
+                        inner.classList.add('scroll-active');
+                    }
+                }
+            });
         }
 
         // ---- buildDOM ----
@@ -3235,7 +3294,7 @@
                             <td class="blur-target">${escapeHtml(l.i)}</td>
                             <td class="td-date">${escapeHtml(l.d)}</td>
                             <td>${escapeHtml(l.c)}</td>
-                            <td>${fmtNoComma(l.q !== undefined && l.q !== null && l.q !== '' ? l.q : 1)}</td>
+                            <td>${fmtNoComma(l.q !== undefined && l.q !== null && l.q !== '' ? l.q : 1)}${l.u ? ' ' + escapeHtml(l.u) : ''}</td>
                             <td>${fmtMoney(l.a)}</td>
                             <td>
                                 <button class="btn-edit-sm" onclick="editLedger('${escapeJsString(mod.id)}', '${l.id}')" aria-label="Edit entry"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -3352,6 +3411,7 @@
                     `<option value="${escapeHtml(c)}" ${c === editingEntry.c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
             }
             const editQtyVal = editingEntry ? fmtNoComma(editingEntry.q !== undefined && editingEntry.q !== null && editingEntry.q !== '' ? editingEntry.q : 1) : '';
+            const editUnitVal = editingEntry ? (editingEntry.u || 'kg') : 'kg';
             const formActionsHtml = editingEntry ? `
                             <div class="flex-row" style="gap:0.2rem; align-items:stretch;">
                                 <button class="btn-update-ledger" style="flex:1;" onclick="updateInlineLedger('${escapeJsString(mod.id)}')">UPDATE</button>
@@ -3366,11 +3426,12 @@
                                 <input type="text" inputmode="decimal" id="l-a-${mod.id}" placeholder="Amount" class="blur-target" oninput="formatCommaInput(this); clampInputValue(this)" value="${editingEntry ? fmt(editingEntry.a) : ''}" style="border-radius:var(--radius-full); flex:1; padding:0.3rem 0.5rem; font-size:0.7rem;" aria-label="Amount" data-clear-on-close>
                             </div>
                             <div class="flex-row" style="gap:0.2rem;">
-                                <div style="flex:1; display:flex; align-items:center; gap:0.3rem; border-radius:var(--radius-full); padding:0.1rem 0.4rem; background:var(--surface); border:1px solid var(--border-light);">
+                                <div style="flex:0 0 50%; display:flex; align-items:center; gap:0.3rem; border-radius:var(--radius-full); padding:0.1rem 0.4rem; background:var(--surface); border:1px solid var(--border-light);">
                                     <span style="font-size:0.7rem; font-weight:var(--font-weight-black); color:var(--text-main);">CAT</span>
                                     <select id="l-c-${mod.id}" aria-label="Category" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:0.25rem 0.4rem; font-size:0.65rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${opts}</select>
                                 </div>
-                                <input type="text" inputmode="decimal" id="l-q-${mod.id}" placeholder="Quantity" class="blur-target" oninput="formatCommaInput(this); clampInputValue(this)" value="${editQtyVal}" style="border-radius:var(--radius-full); flex:1; padding:0.3rem 0.5rem; font-size:0.7rem;" aria-label="Quantity" data-clear-on-close>
+                                <input type="text" inputmode="decimal" id="l-q-${mod.id}" placeholder="Qty" class="blur-target" oninput="formatCommaInput(this); clampInputValue(this)" value="${editQtyVal}" style="border-radius:var(--radius-full); flex:0 0 30%; padding:0.3rem 0.5rem; font-size:0.7rem;" aria-label="Quantity" data-clear-on-close>
+                                <select id="l-u-${mod.id}" aria-label="Unit" style="border-radius:var(--radius-full); flex:0 0 20%; padding:0.25rem 0.2rem; font-size:0.65rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${buildUnitOpts(editUnitVal)}</select>
                             </div>
                             ${formActionsHtml}
                         </div>`;
@@ -3652,6 +3713,8 @@
                 const qtyInput = document.getElementById(`l-q-${modId}`);
                 let q = qtyInput && qtyInput.value.trim() ? parseCommaNum(qtyInput.value) : 1;
                 if (!q || q <= 0) q = 1;
+                const unitInput = document.getElementById(`l-u-${modId}`);
+                const u = unitInput ? unitInput.value : '';
                 const total = Math.min(amount, MAX_INPUT_VALUE);
 
                 if (!item || !amount) { showToast('Please enter item and amount', 'error'); return; }
@@ -3673,14 +3736,14 @@
                 const isDuplicate = existing.some(e => e.i === item && e.a === total && e.c === category && e.d === date);
                 if (isDuplicate) { showToast('Duplicate entry', 'info'); return; }
 
-                const entry = { id: generateId(), i: item, a: total, c: category, d: date };
+                const entry = { id: generateId(), i: item, a: total, c: category, d: date, q, u };
                 app.totalExpense[modId][weekKey].push(entry);
 
                 // Also add to regular ledger
                 if (app.ledgers[modId]) {
-                    const isDup = app.ledgers[modId].some(e => e.i === item && e.a === amount && e.c === category && e.d === date && (e.q || 1) === q);
+                    const isDup = app.ledgers[modId].some(e => e.i === item && e.a === amount && e.c === category && e.d === date && (e.q || 1) === q && (e.u || '') === u);
                     if (!isDup) {
-                        app.ledgers[modId].push({ id: generateId(), i: item, a: Math.min(amount, MAX_INPUT_VALUE), c: category, d: date, q });
+                        app.ledgers[modId].push({ id: generateId(), i: item, a: Math.min(amount, MAX_INPUT_VALUE), c: category, d: date, q, u });
                     }
                 }
 
@@ -3690,6 +3753,7 @@
                 itemInput.value = '';
                 amountInput.value = '';
                 if (qtyInput) qtyInput.value = '';
+                if (unitInput) unitInput.value = '';
                 showToast('Added to expense successfully', 'success');
             } finally { setTimeout(() => { addToTotalExpenseLock[modId] = false; }, 300); }
         }
@@ -3714,9 +3778,12 @@
                 else if (day >= 15 && day <= 21) weekKey = 'week3';
                 else if (day >= 22) weekKey = 'week4';
                 if (!app.totalExpense[modId][weekKey]) app.totalExpense[modId][weekKey] = [];
-                const dup = app.totalExpense[modId][weekKey].some(e => e.i === l.i && e.a === total && e.c === l.c && e.d === l.d);
+                const dup = app.totalExpense[modId][weekKey].some(e => e.i === l.i && e.a === total && e.c === l.c && e.d === l.d && (e.q || 1) === (l.q || 1) && (e.u || '') === (l.u || ''));
                 if (dup) return;
-                app.totalExpense[modId][weekKey].push({ id: generateId(), i: l.i, a: total, c: l.c, d: l.d });
+                const te = { id: generateId(), i: l.i, a: total, c: l.c, d: l.d };
+                if (l.q !== undefined && l.q !== null) te.q = l.q;
+                if (l.u) te.u = l.u;
+                app.totalExpense[modId][weekKey].push(te);
                 added++;
             });
             if (!added) { showToast('All entries already in record', 'info'); return; }
@@ -3841,7 +3908,7 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
                                         <td class="blur-target">${escapeHtml(String(item.i).replace(/,/g, ' '))}</td>
                                         <td class="td-date">${escapeHtml(item.d)}</td>
                                         <td>${escapeHtml(item.c)}</td>
-                                        <td>${fmtNoComma(item.q !== undefined && item.q !== null && item.q !== '' ? item.q : 1)}</td>
+                                        <td>${fmtNoComma(item.q !== undefined && item.q !== null && item.q !== '' ? item.q : 1)}${item.u ? ' ' + escapeHtml(item.u) : ''}</td>
                                         <td>${fmtMoney(item.a)}</td>
                                         <td>
                                             <button class="btn-edit-sm" onclick="editTotalExpenseEntry('${escapeJsString(item.modId)}','${item.weekKey}','${item.id}')" aria-label="Edit entry"><svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -4000,22 +4067,25 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
                 let q = qEl && qEl.value.trim() ? parseCommaNum(qEl.value) : 1;
                 if (!q || q <= 0) q = 1;
                 q = Math.min(q, MAX_INPUT_VALUE);
+                const uEl = D.getElementById(`l-u-${modId}`);
+                const u = uEl ? uEl.value : '';
 
                 if (!i) return;
                 if (!rawA || a === 0) return;
 
                 const existing = app.ledgers[modId] || [];
                 const isDuplicate = existing.some(entry => entry.i === i && entry.a === a && entry.c === c && entry
-                    .d === d && (entry.q || 1) === q);
+                    .d === d && (entry.q || 1) === q && (entry.u || '') === u);
                 if (isDuplicate) return;
 
-                app.ledgers[modId].push({ id: generateId(), i, a, c, d, q });
+                app.ledgers[modId].push({ id: generateId(), i, a, c, d, q, u });
                 logActivity(`Appended ledger entry: ${i} at ${getCurrencySymbol()}${a}`);
                 saveData();
                 renderApp();
                 D.getElementById(`l-i-${modId}`).value = '';
                 D.getElementById(`l-a-${modId}`).value = '';
                 if (qEl) qEl.value = '';
+                if (uEl) uEl.value = '';
                 showToast('Entry added successfully', 'success');
             } finally { setTimeout(() => { addLedgerLock[modId] = false; }, 300); }
         }
@@ -4146,6 +4216,7 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
                             if (!app.totalExpense[modId][wk]) app.totalExpense[modId][wk] = [];
                             const clean = { id: en.id, i: en.i, a: en.a, c: en.c, d: en.d };
                             if (en.q !== undefined && en.q !== null) clean.q = en.q;
+                            if (en.u) clean.u = en.u;
                             if (app.totalExpense[modId][wk].some(e => e.id === clean.id)) clean.id = generateId();
                             app.totalExpense[modId][wk].push(clean);
                             restored++;
@@ -4969,7 +5040,7 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
                 badge.style.display = 'flex';
                 badge.textContent = pendingList.length;
                 nList.innerHTML = pendingList.map((p, i) =>
-                    `<div style="padding:0.4rem 0.5rem; border-bottom:1px solid var(--border-light); cursor:pointer; font-size:0.65rem; font-family:var(--font-family); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:background 0.15s; text-align:center; display:flex; align-items:center; justify-content:center; gap:0.3rem;" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='transparent'" onclick="navToTask('${p.id}')"><span style="color:var(--text-main); font-weight:var(--font-weight-black);">${String(i + 1).padStart(2, '0')}</span><b style="color:var(--accent);">${escapeHtml(p.title)}</b></div>`
+                    `<div style="padding:0.4rem 0.5rem; border-bottom:1px solid var(--border-light); cursor:pointer; font-size:0.65rem; font-family:var(--font-family); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:background 0.15s; display:flex; align-items:center; gap:0.4rem; text-align:left;" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='transparent'" onclick="navToTask('${p.id}')"><span style="color:var(--text-muted); font-weight:var(--font-weight-black); min-width:1.2em; text-align:right;">${String(i + 1).padStart(2, '0')}</span><span style="color:var(--accent); font-weight:var(--font-weight-bold); overflow:hidden; text-overflow:ellipsis;">${escapeHtml(p.title)}</span></div>`
                 ).join('');
                 const currentIds = pendingList.map(p => p.id).sort().join('|');
                 const prevIds = pendingListForNotification.map(p => p.id).sort().join('|');
@@ -7611,8 +7682,8 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
                     bottomNav.style.display = 'none'; isHidden = true;
                 }
             };
-            window.visualViewport.addEventListener('resize', handler);
-            window.visualViewport.addEventListener('scroll', handler);
+            window.visualViewport.addEventListener('resize', handler, { passive: true });
+            window.visualViewport.addEventListener('scroll', handler, { passive: true });
             handler();
         }
 
@@ -7953,8 +8024,8 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
                 if (t && t === cdPanel) return;
                 if (t && cdPanel.contains(t)) return;
                 closeCdPanel();
-            }, true);
-            window.addEventListener('resize', function() { closeCdPanel(); });
+            }, { capture: true, passive: true });
+            window.addEventListener('resize', function() { closeCdPanel(); }, { passive: true });
             window.addEventListener('blur', function() { closeCdPanel(); });
         }
 
@@ -8451,11 +8522,14 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
             const amount = parseCommaNum(document.getElementById('l-a-' + modId).value);
             let category = document.getElementById('l-c-' + modId).value.trim();
             const qty = parseCommaNum(document.getElementById('l-q-' + modId).value);
+            const unitEl = document.getElementById('l-u-' + modId);
+            const unit = unitEl ? unitEl.value : '';
             if (!item || !amount) { showToast('Please fill all fields', 'error'); return; }
             entries[idx].i = item;
             entries[idx].a = Math.min(amount, MAX_INPUT_VALUE);
             entries[idx].c = category;
             entries[idx].q = (qty && qty > 0) ? Math.min(qty, MAX_INPUT_VALUE) : 1;
+            entries[idx].u = unit;
             inlineEditEntry = null;
             saveData();
             renderApp();
@@ -8474,6 +8548,8 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
             const amount = parseCommaNum(document.getElementById('editLedgerAmount').value);
             const qty = parseCommaNum(document.getElementById('editLedgerQuantity').value);
             const category = document.getElementById('editLedgerCategory').value;
+            const unitEl = document.getElementById('editLedgerUnit');
+            const unit = unitEl ? unitEl.value : '';
             if (!item || !amount) { showToast('Please fill all fields', 'error'); return; }
             const entries = app.ledgers[modId] || [];
             const idx = entries.findIndex(e => e.id === itemId);
@@ -8482,6 +8558,7 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
             entries[idx].a = Math.min(amount, MAX_INPUT_VALUE);
             entries[idx].c = category;
             entries[idx].q = (qty && qty > 0) ? Math.min(qty, MAX_INPUT_VALUE) : 1;
+            entries[idx].u = unit;
             saveData();
             closeModal('editLedgerModal');
             editingLedgerEntry = null;
@@ -8513,11 +8590,14 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
             const amount = parseCommaNum(document.getElementById('rt-exp-a').value);
             let category = document.getElementById('rt-exp-c').value.trim();
             const qty = parseCommaNum(document.getElementById('rt-exp-q').value);
+            const unitEl2 = document.getElementById('rt-exp-u');
+            const unit2 = unitEl2 ? unitEl2.value : '';
             if (!item || !amount) { showToast('Please fill all fields', 'error'); return; }
             entries[idx].i = item;
             entries[idx].a = Math.min(amount, MAX_INPUT_VALUE);
             entries[idx].c = category;
             entries[idx].q = (qty && qty > 0) ? Math.min(qty, MAX_INPUT_VALUE) : 1;
+            entries[idx].u = unit2;
             inlineExpenseEdit = null;
             saveData();
             renderApp();
@@ -8547,7 +8627,8 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
                             <span style="font-size:0.7rem; font-weight:var(--font-weight-black); color:var(--text-main);">CAT</span>
                             <select id="rt-exp-c" aria-label="Category" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:0.25rem 0.4rem; font-size:0.65rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${opts}</select>
                         </div>
-                        <input type="text" inputmode="decimal" id="rt-exp-q" placeholder="Quantity" class="blur-target" oninput="formatCommaInput(this); clampInputValue(this)" value="${fmt(entry.q !== undefined && entry.q !== null && entry.q !== '' ? entry.q : 1)}" style="border-radius:var(--radius-full); flex:1; padding:0.3rem 0.5rem; font-size:0.7rem;" aria-label="Quantity">
+                        <input type="text" inputmode="decimal" id="rt-exp-q" placeholder="Qty" class="blur-target" oninput="formatCommaInput(this); clampInputValue(this)" value="${fmt(entry.q !== undefined && entry.q !== null && entry.q !== '' ? entry.q : 1)}" style="border-radius:var(--radius-full); flex:1; padding:0.3rem 0.5rem; font-size:0.7rem;" aria-label="Quantity">
+                        <select id="rt-exp-u" aria-label="Unit" style="border-radius:var(--radius-full); flex:0 0 auto; padding:0.25rem 0.3rem; font-size:0.65rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black); max-width:60px;">${buildUnitOpts(entry.u || 'kg')}</select>
                     </div>
                     <div class="flex-row" style="gap:0.2rem; align-items:stretch;">
                         <button class="btn-update-ledger" style="flex:1;" onclick="updateTotalExpenseEntry()">UPDATE</button>
@@ -8860,12 +8941,12 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
             const drawerOvl = D.getElementById('drawerOverlay');
             const slideOvl = D.getElementById('slideOverlay');
             if (drawerOvl) {
-                drawerOvl.addEventListener('touchend', e => { e.preventDefault(); closeDrawer(); });
-                drawerOvl.addEventListener('click', e => { e.preventDefault(); closeDrawer(); });
+                drawerOvl.addEventListener('touchend', function(e) { closeDrawer(); });
+                drawerOvl.addEventListener('click', function(e) { closeDrawer(); });
             }
             if (slideOvl) {
-                slideOvl.addEventListener('touchend', e => { e.preventDefault(); closeSlideMenu(); });
-                slideOvl.addEventListener('click', e => { e.preventDefault(); closeSlideMenu(); });
+                slideOvl.addEventListener('touchend', function(e) { closeSlideMenu(); });
+                slideOvl.addEventListener('click', function(e) { closeSlideMenu(); });
             }
 
             return true;
