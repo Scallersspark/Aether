@@ -1,4 +1,4 @@
-const APP_VERSION = '9.7.0';
+const APP_VERSION = '9.8.0';
 const CACHE_NAME = 'aether-v' + APP_VERSION;
 const ASSETS = [
   './',
