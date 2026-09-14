@@ -109,7 +109,7 @@
         // ============================================================
         //  CONSTANTS & DATA
         // ============================================================
-        let APP_VERSION_CODE = "9.1.0";
+        let APP_VERSION_CODE = "9.1.1";
         const MAX_INPUT_VALUE = Number.MAX_SAFE_INTEGER;
 
         async function syncVersionFromCache() {
@@ -3114,12 +3114,12 @@
             let salaryVal = app.grids[mod.id + '_salary'] || '';
 
             let headerHtml = `
-                        <div class="grid-header-with-drawer" style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:0.3rem;">
+                        <div class="grid-header-with-drawer" style="display:flex; align-items:center; width:100%; gap:0.3rem;">
                             <div class="hdr-left" style="flex:1; display:flex; justify-content:center;">
                                 <span class="month-label-display" style="font-size:0.7rem; background:transparent; color:var(--accent); border:none; padding:0.2rem 0.4rem; font-weight:var(--font-weight-black);">${escapeHtml(monthLabel.toUpperCase())}</span>
                             </div>
-                            <div class="hdr-right" style="flex:0 0 auto; display:flex; align-items:center; gap:0.2rem;">
-                                <div class="date-picker-wrap" style="flex:1; max-width:180px;">
+                            <div class="hdr-right" style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.2rem;">
+                                <div class="date-picker-wrap" style="display:flex; align-items:center; gap:0.2rem;">
                                     <span class="sub-lbl label-bold-high">Date</span>
                                     <input type="date" id="hdr-date-${mod.id}" value="${escapeHtml(ds)}" max="${currentRenderDateStr}" onchange="updateModStart('${escapeJsString(mod.id)}', this.value)" aria-label="Start date for ${escapeHtml(mod.title)}" style="font-size:0.75rem; min-width:80px; background:var(--app-bg); border:none; padding:0.3rem 0.5rem; border-radius:var(--radius-sm); font-weight:var(--font-weight-black);">
                                 </div>
@@ -3314,12 +3314,12 @@
             let displayModBudget = currentModBudget !== '' ? fmt(currentModBudget) : '';
 
             let finHeaderHtml = `
-                        <div class="fin-header-with-drawer" style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:0.3rem;">
+                        <div class="fin-header-with-drawer" style="display:flex; align-items:center; width:100%; gap:0.3rem;">
                             <div class="hdr-left" style="flex:1; display:flex; justify-content:center;">
                                 <span class="month-label-display" style="font-size:0.7rem; background:transparent; color:var(--accent); border:none; padding:0.2rem 0.4rem; font-weight:var(--font-weight-black);">${escapeHtml(monthLabel2.toUpperCase())}</span>
                             </div>
-                            <div class="hdr-right" style="flex:0 0 auto; display:flex; align-items:center; gap:0.2rem;">
-                                <div class="date-picker-wrap" style="flex:1; max-width:180px;">
+                            <div class="hdr-right" style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.2rem;">
+                                <div class="date-picker-wrap" style="display:flex; align-items:center; gap:0.2rem;">
                                     <span class="sub-lbl label-bold-high">Date</span>
                                     <input type="date" id="hdr-date-${mod.id}" value="${escapeHtml(ds)}" max="${currentRenderDateStr}" onchange="updateModStart('${escapeJsString(mod.id)}', this.value)" aria-label="Start date for ${escapeHtml(mod.title)}" style="font-size:0.75rem; min-width:80px; background:var(--app-bg); border:none; padding:0.3rem 0.5rem; border-radius:var(--radius-sm); font-weight:var(--font-weight-black);">
                                 </div>
@@ -3431,7 +3431,7 @@
                                     <select id="l-c-${mod.id}" aria-label="Category" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:0.25rem 0.4rem; font-size:0.65rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${opts}</select>
                                 </div>
                                 <input type="text" inputmode="decimal" id="l-q-${mod.id}" placeholder="Qty" class="blur-target" oninput="formatCommaInput(this); clampInputValue(this)" value="${editQtyVal}" style="border-radius:var(--radius-full); flex:0 0 30%; padding:0.3rem 0.5rem; font-size:0.7rem;" aria-label="Quantity" data-clear-on-close>
-                                <select id="l-u-${mod.id}" aria-label="Unit" style="border-radius:var(--radius-full); flex:0 0 12%; padding:0.25rem 0.1rem; font-size:0.6rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${buildUnitOpts(editUnitVal)}</select>
+                                <select id="l-u-${mod.id}" aria-label="Unit" style="border-radius:var(--radius-full); flex:0 0 18%; padding:0.25rem 0.1rem; font-size:0.6rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${buildUnitOpts(editUnitVal)}</select>
                             </div>
                             ${formActionsHtml}
                         </div>`;
