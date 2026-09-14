@@ -6131,16 +6131,19 @@
             gap: 0.3rem;
         }
         .grid-header-with-drawer .hdr-left {
-            flex: 0 0 auto;
+            flex: 1;
+            display: flex;
+            justify-content: center;
         }
         .grid-header-with-drawer .hdr-center {
             flex: 1;
             text-align: center;
         }
         .grid-header-with-drawer .hdr-right {
-            flex: 0 0 auto;
+            flex: 1;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 0.2rem;
         }
         .drawer-trigger-btn {
@@ -7194,14 +7197,14 @@
             display: none;
         }
         .grid-header-with-drawer .hdr-right .date-picker-wrap {
-            margin-left: auto;
+            margin: 0 auto;
         }
 
         .fin-header-with-drawer .hdr-right .drawer-trigger-btn {
             display: none;
         }
         .fin-header-with-drawer .hdr-right .date-picker-wrap {
-            margin-left: auto;
+            margin: 0 auto;
         }
 
         .tab-row-with-drawer {
