@@ -3431,7 +3431,7 @@
                                     <select id="l-c-${mod.id}" aria-label="Category" style="flex:1; min-width:0; border-radius:var(--radius-sm); padding:0.25rem 0.4rem; font-size:0.65rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${opts}</select>
                                 </div>
                                 <input type="text" inputmode="decimal" id="l-q-${mod.id}" placeholder="Qty" class="blur-target" oninput="formatCommaInput(this); clampInputValue(this)" value="${editQtyVal}" style="border-radius:var(--radius-full); flex:0 0 30%; padding:0.3rem 0.5rem; font-size:0.7rem;" aria-label="Quantity" data-clear-on-close>
-                                <select id="l-u-${mod.id}" aria-label="Unit" style="border-radius:var(--radius-full); flex:0 0 20%; padding:0.25rem 0.2rem; font-size:0.65rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${buildUnitOpts(editUnitVal)}</select>
+                                <select id="l-u-${mod.id}" aria-label="Unit" style="border-radius:var(--radius-full); flex:0 0 12%; padding:0.25rem 0.1rem; font-size:0.6rem; background:var(--app-bg); border:1px solid var(--border-med); color:var(--color-black);">${buildUnitOpts(editUnitVal)}</select>
                             </div>
                             ${formActionsHtml}
                         </div>`;
