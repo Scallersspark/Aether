@@ -109,7 +109,7 @@
         // ============================================================
         //  CONSTANTS & DATA
         // ============================================================
-        let APP_VERSION_CODE = "9.1.4";
+        let APP_VERSION_CODE = "9.1.5";
         const MAX_INPUT_VALUE = Number.MAX_SAFE_INTEGER;
 
         async function syncVersionFromCache() {
