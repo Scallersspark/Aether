@@ -2479,12 +2479,6 @@
         }
 
         function deleteBudget(cat) {
-            let inUse = false;
-            app.modules.filter(m => m.format === 'ledger').forEach(mod => {
-                const entries = app.ledgers[mod.id] || [];
-                if (entries.some(e => e.c === cat)) inUse = true;
-            });
-            if (inUse) { showToast('Budget is in use by a ledger', 'error'); return; }
             const idx = app.budgetCats.indexOf(cat);
             if (idx > -1) {
                 binAdd('budget', cat, 'Budget: ' + cat);
