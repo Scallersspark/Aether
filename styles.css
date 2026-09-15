@@ -8167,7 +8167,7 @@
 
         /* ---- Ledger entries table (# ITEM DATE CAT QTY PRICE EDIT) ---- */
         .ledger-table-wrap {
-            overflow-x: auto;
+            overflow-x: hidden;
             margin-top: 0.3rem;
         }
         .ledger-table {
@@ -8175,6 +8175,7 @@
             border-collapse: separate;
             border-spacing: 0 0.15rem;
             font-family: var(--font-family);
+            table-layout: fixed;
         }
         .ledger-table th {
             font-size: 0.6rem;
@@ -8182,7 +8183,7 @@
             color: var(--text-main);
             text-transform: uppercase;
             text-align: left;
-            padding: 0.15rem 0.3rem;
+            padding: 0.15rem 0.2rem;
             white-space: nowrap;
             letter-spacing: 0.03em;
         }
@@ -8190,10 +8191,19 @@
             font-size: 0.6rem;
             font-weight: var(--font-weight-black);
             color: var(--text-muted);
-            padding: 0.3rem;
+            padding: 0.3rem 0.2rem;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             background: var(--surface);
         }
+        .ledger-table th:nth-child(1), .ledger-table td:nth-child(1) { width: 7%; text-align: center; }
+        .ledger-table th:nth-child(2), .ledger-table td:nth-child(2) { width: 25%; }
+        .ledger-table th:nth-child(3), .ledger-table td:nth-child(3) { width: 17%; }
+        .ledger-table th:nth-child(4), .ledger-table td:nth-child(4) { width: 13%; }
+        .ledger-table th:nth-child(5), .ledger-table td:nth-child(5) { width: 13%; text-align: right; }
+        .ledger-table th:nth-child(6), .ledger-table td:nth-child(6) { width: 15%; text-align: right; }
+        .ledger-table th:nth-child(7), .ledger-table td:nth-child(7) { width: 10%; text-align: center; }
         .ledger-table tbody td:first-child {
             border-radius: var(--radius-md) 0 0 var(--radius-md);
         }
