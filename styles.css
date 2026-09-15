@@ -1754,10 +1754,13 @@
         .fin-status-grid,
         .split-eq {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(0, 1fr));
             gap: 0.4rem;
             width: 100%;
         }
+        .fin-status-grid.cols-1 { grid-template-columns: 1fr; }
+        .fin-status-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .fin-status-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
         .fin-status-grid .budget-item,
         .split-eq .budget-item {
             display: flex;

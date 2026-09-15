@@ -2270,7 +2270,7 @@
             modBudget = Math.min(modBudget, MAX_INPUT_VALUE);
             let modRemaining = modBudget - modTotal;
             let catKeys = app.cats.filter(c => sums[c] > 0 || true);
-            let catDistributionHtml = `<div class="fin-status-grid">`;
+            let catDistributionHtml = `<div class="fin-status-grid ${catKeys.length <= 3 ? 'cols-' + Math.min(catKeys.length, 3) : ''}">`;
             catKeys.forEach(c => {
                 const cCol = getCategoryColor(c);
                 catDistributionHtml += `
@@ -2980,7 +2980,8 @@
                 totalExpAll = Math.min(totalExpAll, MAX_INPUT_VALUE);
 
                 if (activeBudgets.length > 0) {
-                    budgetInputsHtml = `<div class="fin-status-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.4rem; margin-bottom:0.4rem;">`;
+                    const bCls = activeBudgets.length === 1 ? 'cols-1' : activeBudgets.length === 2 ? 'cols-2' : 'cols-3';
+                    budgetInputsHtml = `<div class="fin-status-grid ${bCls}" style="margin-bottom:0.4rem;">`;
                     activeBudgets.forEach(cat => {
                         tBudg += parseCommaNum(app.budgets[cat]);
                     });
@@ -4754,7 +4755,7 @@ weekKey: wk, dateObj: parseEntryDate(entry.d) });
                     let sumEl = D.getElementById('sum-' + mod.id);
                     if (sumEl) {
                         let catKeys = app.cats.filter(c => sums[c] > 0 || true);
-                        let catDistributionHtml = `<div class="fin-status-grid">`;
+                        let catDistributionHtml = `<div class="fin-status-grid ${catKeys.length <= 3 ? 'cols-' + Math.min(catKeys.length, 3) : ''}">`;
                         catKeys.forEach(c => {
                             const cCol = getCategoryColor(c);
                             catDistributionHtml += `
